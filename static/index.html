@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Mission Analyzer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --dark: #1a252f;
+            --light: #f8f9fa;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --success: #2ecc71;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--light);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .header {
+            background-color: var(--primary);
+            color: white;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--dark);
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+        .logo span {
+            color: var(--secondary);
+            font-weight: 600;
+        }
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            overflow: hidden;
+        }
+        .panel-header {
+            font-size: 1rem;
+            margin-bottom: 12px;
+            color: var(--primary);
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .editor-container {
+            background: white;
+            border-radius: 6px;
+            height: 100%;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+        }
+        .line-numbers {
+            background: #f5f7f9;
+            color: #7f8c8d;
+            padding: 10px;
+            text-align: right;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            overflow-y: auto;
+            user-select: none;
+        }
+        textarea {
+            flex: 1;
+            border: none;
+            padding: 10px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            background: white;
+            color: #2c3e50;
+        }
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background-color: var(--dark);
+        }
+        .btn-analyze {
+            background-color: var(--secondary);
+        }
+        .btn-analyze:hover {
+            background-color: #2980b9;
+        }
+        .result-container {
+            background: white;
+            border-radius: 6px;
+            padding: 15px;
+            height: 100%;
+            overflow: auto;
+            border: 1px solid #ddd;
+        }
+        .mission-card {
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--secondary);
+        }
+        .mission-title {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        .route-path {
+            font-family: 'Roboto Mono', monospace;
+            background: #2c3e50;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        .data-table th, .data-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .data-table th {
+            background-color: #f5f7f9;
+            color: var(--primary);
+        }
+        .warning {
+            color: var(--warning);
+            background: #fef9e7;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            color: var(--danger);
+            background: #fdedec;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .graph-view {
+            font-family: 'Roboto Mono', monospace;
+            background: #f5f7f9;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .highlight {
+            background-color: #e3f2fd;
+            font-weight: 500;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #bdc3c7;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #95a5a6;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">Space <span>Mission Analyzer</span></div>
+    </header>
+
+    <div class="main-container">
+        <!-- Panel del Editor -->
+        <div class="panel">
+            <div class="panel-header">
+                <span>Editor de Código .space</span>
+            </div>
+            <div class="editor-container">
+                <div id="line-numbers" class="line-numbers">1</div>
+                <textarea id="editor" spellcheck="false">[global]
+title: Misión a Kepler-186f
+date: 2025-04-23
+origen: Tierra
+destino: Kepler-186f
+
+[planetas]
+Nombre: Tierra, Coordenadas: (0,0,0), Radio: 6371, Gravedad: 9.8
+Nombre: Marte, Coordenadas: (50,30,20), Radio: 3389, Gravedad: 3.7
+Nombre: Kepler-186f, Coordenadas: (150,75,200), Radio: 7200, Gravedad: 11.2
+
+[agujeros_negros]
+Nombre: BH1, Coordenadas: (80,40,60), Radio: 15
+
+[nave]
+Nombre: Explorador-X, Velocidad: 10, Combustible: 120, Restricciones: evitar agujeros</textarea>
+            </div>
+            <button id="analyze-btn" class="btn btn-analyze">Analizar Misión</button>
+        </div>
+
+        <!-- Panel de Resultados -->
+        <div class="panel">
+            <div class="panel-header">
+                <span>Resultados del Análisis</span>
+            </div>
+            <div id="result-container" class="result-container">
+                <div class="mission-card">
+                    <p>Ingresa un código .space y haz clic en "Analizar Misión"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Elementos del DOM
+        const editor = document.getElementById('editor');
+        const lineNumbers = document.getElementById('line-numbers');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const resultContainer = document.getElementById('result-container');
+
+        // Actualizar números de línea
+        function updateLineNumbers() {
+            const lines = editor.value.split('\n');
+            lineNumbers.innerHTML = '';
+            
+            lines.forEach((_, i) => {
+                const lineNum = document.createElement('div');
+                lineNum.textContent = i + 1;
+                lineNumbers.appendChild(lineNum);
+            });
+        }
+
+        // Resaltar línea actual
+        function highlightCurrentLine() {
+            const cursorPos = editor.selectionStart;
+            const currentLine = editor.value.substr(0, cursorPos).split('\n').length;
+            
+            Array.from(lineNumbers.children).forEach((line, i) => {
+                line.classList.toggle('highlight', i === currentLine - 1);
+            });
+        }
+
+        // Analizar código
+        async function analyzeMission() {
+            const code = editor.value.trim();
+            
+            if (!code) {
+                resultContainer.innerHTML = `
+                    <div class="error">
+                        Por favor ingresa un código .space para analizar
+                    </div>
+                `;
+                return;
+            }
+
+            resultContainer.innerHTML = `
+                <div class="mission-card">
+                    <p>Analizando misión espacial...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code })
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    resultContainer.innerHTML = `
+                        <div class="error">
+                            <strong>Error en el análisis:</strong> ${data.error || 'Error desconocido'}
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Formatear resultados
+                renderResults(data);
+                
+            } catch (error) {
+                resultContainer.innerHTML = `
+                    <div class="error">
+                        <strong>Error de conexión:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Renderizar resultados
+        function renderResults(data) {
+            const { mission, planets, blackholes, spaceship, route, distance, graph, warnings } = data.data;
+            
+            let html = `
+                <div class="mission-card">
+                    <h3 class="mission-title">${mission || 'Misión sin nombre'}</h3>
+                    <p><strong>Fecha:</strong> ${data.data.date || 'No especificada'}</p>
+                </div>
+
+                <div class="mission-card">
+                    <h3 class="mission-title">Ruta Calculada</h3>
+                    <p><strong>Origen:</strong> ${route[0]}</p>
+                    <p><strong>Destino:</strong> ${route[route.length - 1]}</p>
+                    <div class="route-path">${route.join(' → ')}</div>
+                    <p><strong>Distancia total:</strong> ${distance.toFixed(2)} unidades</p>
+                </div>
+
+                <div class="mission-card">
+                    <h3 class="mission-title">Detalles de la Misión</h3>
+                    <table class="data-table">
+                        <tr>
+                            <th>Planetas</th>
+                            <th>Coordenadas</th>
+                        </tr>
+            `;
+
+            // Planetas
+            planets.forEach(planet => {
+                const planetData = data.data.planets_data.find(p => p.name === planet);
+                if (planetData) {
+                    html += `
+                        <tr>
+                            <td>${planet}</td>
+                            <td>(${planetData.x}, ${planetData.y}, ${planetData.z})</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            html += `
+                    </table>
+                </div>
+
+                <div class="mission-card">
+                    <h3 class="mission-title">Nave Espacial</h3>
+                    <p><strong>Nombre:</strong> ${spaceship}</p>
+                    <p><strong>Velocidad:</strong> ${data.data.spaceship_data?.velocity || 'N/A'}</p>
+                    <p><strong>Combustible:</strong> ${data.data.spaceship_data?.fuel || 'N/A'}</p>
+                    <p><strong>Restricciones:</strong> ${data.data.spaceship_data?.restrictions || 'Ninguna'}</p>
+                </div>
+            `;
+            
+            // Agujeros negros
+            if (blackholes.length > 0) {
+                html += `
+                    <div class="mission-card">
+                        <h3 class="mission-title">Agujeros Negros</h3>
+                        <table class="data-table">
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Coordenadas</th>
+                                <th>Radio</th>
+                            </tr>
+                `;
+
+                blackholes.forEach(bh => {
+                    const bhData = data.data.blackholes_data.find(b => b.name === bh);
+                    if (bhData) {
+                        html += `
+                            <tr>
+                                <td>${bh}</td>
+                                <td>(${bhData.x}, ${bhData.y}, ${bhData.z})</td>
+                                <td>${bhData.radius}</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                html += `
+                        </table>
+                    </div>
+                `;
+            }
+
+            // Grafo de conexiones
+            html += `
+                <div class="mission-card">
+                    <h3 class="mission-title">Grafo de Conexiones</h3>
+                    <pre class="graph-view">${JSON.stringify(graph, null, 2)}</pre>
+                </div>
+            `;
+
+            // Advertencias
+            if (warnings && warnings.length > 0) {
+                html += `
+                    <div class="warning">
+                        <h3 class="mission-title">Advertencias</h3>
+                        <ul>
+                            ${warnings.map(w => `<li>${w}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            resultContainer.innerHTML = html;
+        }
+
+        // Event Listeners
+        editor.addEventListener('input', updateLineNumbers);
+        editor.addEventListener('scroll', () => {
+            lineNumbers.scrollTop = editor.scrollTop;
+        });
+        editor.addEventListener('click', highlightCurrentLine);
+        editor.addEventListener('keyup', highlightCurrentLine);
+        analyzeBtn.addEventListener('click', analyzeMission);
+
+        // Inicialización
+        updateLineNumbers();
+    </script>
+</body>
+</html>
