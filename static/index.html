@@ -67,6 +67,15 @@
             justify-content: space-between;
             align-items: center;
         }
+        .panel-header button {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
         .editor-container {
             background: white;
             border-radius: 6px;
@@ -99,6 +108,18 @@
             background: white;
             color: #2c3e50;
         }
+        .latex-container {
+            flex: 1;
+            border: none;
+            padding: 10px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            background: white;
+            color: #2c3e50;
+            overflow: auto;
+            white-space: pre;
+        }
         .btn {
             background-color: var(--primary);
             color: white;
@@ -126,6 +147,40 @@
             height: 100%;
             overflow: auto;
             border: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+        }
+        .results-content {
+            flex: 1;
+            overflow: auto;
+        }
+        .latex-tab {
+            margin-top: 15px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .latex-tab-content {
+            flex: 1;
+            overflow: auto;
+            background: #f5f7f9;
+            border: 1px solid #ddd;
+            border-radius: 0 0 6px 6px;
+            padding: 10px;
+        }
+        .tab-buttons {
+            display: flex;
+        }
+        .tab-button {
+            padding: 8px 15px;
+            background: #ddd;
+            border: none;
+            cursor: pointer;
+            font-family: 'Roboto', sans-serif;
+        }
+        .tab-button.active {
+            background: var(--secondary);
+            color: white;
         }
         .mission-card {
             background: #f8fafc;
@@ -240,10 +295,22 @@ Nombre: Explorador-X, Velocidad: 10, Combustible: 120, Restricciones: evitar agu
         <div class="panel">
             <div class="panel-header">
                 <span>Resultados del Análisis</span>
+                <button id="copy-latex-btn">Copiar LaTeX</button>
             </div>
             <div id="result-container" class="result-container">
-                <div class="mission-card">
-                    <p>Ingresa un código .space y haz clic en "Analizar Misión"</p>
+                <div class="results-content" id="results-content">
+                    <div class="mission-card">
+                        <p>Ingresa un código .space y haz clic en "Analizar Misión"</p>
+                    </div>
+                </div>
+                <div class="latex-tab">
+                    <div class="tab-buttons">
+                        <button class="tab-button active" onclick="switchTab('results')">Resultados</button>
+                        <button class="tab-button" onclick="switchTab('latex')">Código LaTeX</button>
+                    </div>
+                    <div class="latex-tab-content" id="latex-content">
+                        <pre id="latex-code">El código LaTeX aparecerá aquí después del análisis</pre>
+                    </div>
                 </div>
             </div>
         </div>
@@ -255,6 +322,9 @@ Nombre: Explorador-X, Velocidad: 10, Combustible: 120, Restricciones: evitar agu
         const lineNumbers = document.getElementById('line-numbers');
         const analyzeBtn = document.getElementById('analyze-btn');
         const resultContainer = document.getElementById('result-container');
+        const resultsContent = document.getElementById('results-content');
+        const latexCode = document.getElementById('latex-code');
+        const copyLatexBtn = document.getElementById('copy-latex-btn');
 
         // Actualizar números de línea
         function updateLineNumbers() {
@@ -278,12 +348,49 @@ Nombre: Explorador-X, Velocidad: 10, Combustible: 120, Restricciones: evitar agu
             });
         }
 
+        // Cambiar entre pestañas
+        function switchTab(tabName) {
+            const latexContent = document.getElementById('latex-content');
+            const tabButtons = document.querySelectorAll('.tab-button');
+            
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            if (tabName === 'results') {
+                resultsContent.style.display = 'block';
+                latexContent.style.display = 'none';
+                tabButtons[0].classList.add('active');
+            } else {
+                resultsContent.style.display = 'none';
+                latexContent.style.display = 'block';
+                tabButtons[1].classList.add('active');
+            }
+        }
+
+        // Copiar código LaTeX al portapapeles
+        copyLatexBtn.addEventListener('click', () => {
+            const range = document.createRange();
+            range.selectNode(latexCode);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            
+            // Feedback visual
+            const originalText = copyLatexBtn.textContent;
+            copyLatexBtn.textContent = '¡Copiado!';
+            setTimeout(() => {
+                copyLatexBtn.textContent = originalText;
+            }, 2000);
+        });
+
         // Analizar código
         async function analyzeMission() {
             const code = editor.value.trim();
             
             if (!code) {
-                resultContainer.innerHTML = `
+                resultsContent.innerHTML = `
                     <div class="error">
                         Por favor ingresa un código .space para analizar
                     </div>
@@ -291,7 +398,7 @@ Nombre: Explorador-X, Velocidad: 10, Combustible: 120, Restricciones: evitar agu
                 return;
             }
 
-            resultContainer.innerHTML = `
+            resultsContent.innerHTML = `
                 <div class="mission-card">
                     <p>Analizando misión espacial...</p>
                 </div>
@@ -309,7 +416,7 @@ Nombre: Explorador-X, Velocidad: 10, Combustible: 120, Restricciones: evitar agu
                 const data = await response.json();
 
                 if (!data.success) {
-                    resultContainer.innerHTML = `
+                    resultsContent.innerHTML = `
                         <div class="error">
                             <strong>Error en el análisis:</strong> ${data.error || 'Error desconocido'}
                         </div>
@@ -319,14 +426,105 @@ Nombre: Explorador-X, Velocidad: 10, Combustible: 120, Restricciones: evitar agu
 
                 // Formatear resultados
                 renderResults(data);
+                generateLatexCode(data);
                 
             } catch (error) {
-                resultContainer.innerHTML = `
+                resultsContent.innerHTML = `
                     <div class="error">
                         <strong>Error de conexión:</strong> ${error.message}
                     </div>
                 `;
             }
+        }
+
+        // Generar código LaTeX
+        function generateLatexCode(data) {
+            const { mission, planets, blackholes, spaceship, route, distance } = data.data;
+            
+            // Preparar datos para LaTeX
+            const planetRows = data.data.planets_data.map(p => 
+                `${p.name} & (${p.x}, ${p.y}, ${p.z}) & ${p.radius} & ${p.gravity} \\\\`
+            ).join('\n');
+            
+            const bhRows = data.data.blackholes_data.map(bh => 
+                `(${bh.x}, ${bh.y}, ${bh.z}) & ${bh.radius} \\\\`
+            ).join('\n');
+            
+            const routeItems = route.map(p => `\\item ${p}`).join('\n');
+            
+            const latexTemplate = `\\documentclass[conference]{IEEEtran}
+\\IEEEoverridecommandlockouts
+\\usepackage{cite}
+\\usepackage{amsmath,amssymb,amsfonts}
+\\usepackage{algorithmic}
+\\usepackage{float}
+\\usepackage{graphicx}
+\\usepackage{textcomp}
+\\usepackage{tikz}
+\\usetikzlibrary{arrows.meta}
+\\usetikzlibrary{positioning}
+\\usepackage[utf8]{inputenc}
+
+\\title{${mission || 'Misión Espacial'}}
+\\author{Compilador de Misiones Espaciales}
+\\date{${data.data.date || '2025-01-01'}}
+
+\\begin{document}
+
+\\maketitle
+
+\\begin{abstract}
+Informe generado automáticamente por Space Mission Analyzer.
+\\end{abstract}
+
+\\section{Introducción}
+Informe de la misión espacial.
+
+\\section{Descripción de la Ruta}
+Ruta calculada entre ${route[0]} y ${route[route.length - 1]}.
+
+\\section{Ruta Calculada}
+\\begin{itemize}
+${routeItems}
+\\end{itemize}
+
+\\textbf{Distancia total:} ${distance.toFixed(2)} unidades
+
+\\section{Restricciones}
+${spaceship?.restrictions || 'Ninguna restricción especificada'}
+
+\\section{Planetas}
+\\begin{table}[H]
+\\centering
+\\begin{tabular}{|l|l|l|l|}
+\\hline
+\\textbf{Planeta} & \\textbf{Coordenadas (x, y, z)} & \\textbf{Radio} & \\textbf{Gravedad} \\\\
+\\hline
+${planetRows}
+\\hline
+\\end{tabular}
+\\caption{Tabla de planetas en la misión}
+\\end{table}
+
+\\section{Agujeros Negros}
+\\begin{table}[H]
+\\centering
+\\begin{tabular}{|l|l|}
+\\hline
+\\textbf{Posición (x, y, z)} & \\textbf{Radio} \\\\
+\\hline
+${bhRows}
+\\hline
+\\end{tabular}
+\\caption{Tabla de agujeros negros en el trayecto}
+\\end{table}
+
+\\section{Conclusión}
+Misión completada con éxito.
+
+\\end{document}`;
+
+            latexCode.textContent = latexTemplate;
         }
 
         // Renderizar resultados
@@ -434,7 +632,7 @@ Nombre: Explorador-X, Velocidad: 10, Combustible: 120, Restricciones: evitar agu
                 `;
             }
 
-            resultContainer.innerHTML = html;
+            resultsContent.innerHTML = html;
         }
 
         // Event Listeners
@@ -448,6 +646,7 @@ Nombre: Explorador-X, Velocidad: 10, Combustible: 120, Restricciones: evitar agu
 
         // Inicialización
         updateLineNumbers();
+        switchTab('results'); // Mostrar pestaña de resultados por defecto
     </script>
 </body>
 </html>

@@ -1,8 +1,8 @@
 import math
 import numpy as np
-import matplotlib.pyplot as plt
 from io import StringIO
-from mpl_toolkits.mplot3d import Axes3D
+from .automata import AFD
+from core.Lexical_Validator import LexicalValidator
 
 class SpaceAnalyzer:
     DISABLE_RESTRICTION_CHECK = False
@@ -69,15 +69,24 @@ class SpaceAnalyzer:
         return parts
 
     def parse_space_file(self, file_content):
-        """Analiza contenido .space desde un string o archivo"""
+        """Analiza contenido .space desde un string o archivo después de validación léxica"""
         if isinstance(file_content, str):
+            source_code = file_content
             file_like = StringIO(file_content)
         else:
-            file_like = file_content
+            source_code = file_content.read()
+            file_like = StringIO(source_code)
+
+        # Validación léxica antes del parseo
+        validator = LexicalValidator()
+        try:
+            validator.validate(source_code)
+        except Exception as e:
+            raise ValueError(f"Error léxico detectado: {e}")
 
         mission = self.Mission()
         current_section = "global"
-        
+
         file_like.seek(0)
         for line in file_like:
             line = line.strip()
@@ -127,7 +136,6 @@ class SpaceAnalyzer:
         coords = self._parse_coordinates(data.get("coordenadas", "(0,0,0)"))
         radius = float(data.get("radio", 0))
         gravity = float(data.get("gravedad", 0))
-        
         mission.planets[name] = self.Planet(name, *coords, radius, gravity)
 
     def _parse_blackhole_line(self, line, mission):
@@ -141,7 +149,6 @@ class SpaceAnalyzer:
         name = data.get("nombre", "")
         coords = self._parse_coordinates(data.get("coordenadas", "(0,0,0)"))
         radius = float(data.get("radio", 0))
-        
         mission.blackholes.append(self.BlackHole(name, *coords, radius))
 
     def _parse_spaceship_line(self, line, mission):
@@ -156,7 +163,6 @@ class SpaceAnalyzer:
         velocity = float(data.get("velocidad", 0))
         fuel = float(data.get("combustible", 0))
         restrictions = data.get("restricciones", "")
-        
         mission.spaceship = self.Spaceship(name, velocity, fuel, restrictions)
 
     def _parse_text_line(self, line, mission):
@@ -172,14 +178,14 @@ class SpaceAnalyzer:
 
     @staticmethod
     def euclidean_distance(p1, p2):
-        return math.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 + (p1[2]-p2[2])**2)
+        return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2 + (p1[2] - p2[2]) ** 2)
 
     def edge_safe(self, p1, p2, blackholes, margin=5):
         d = p2 - p1
         d_norm_sq = np.dot(d, d)
         if d_norm_sq == 0:
             return True
-            
+
         for bh in blackholes:
             bh_center = bh.coordinates()
             t = np.dot(bh_center - p1, d) / d_norm_sq
@@ -190,70 +196,88 @@ class SpaceAnalyzer:
                 return False
         return True
 
-    def build_graph(self, mission):
-        graph = {name: [] for name in mission.planets}
-        planet_names = list(mission.planets.keys())
+    def build_afd_de_planetas(self, mission):
+        print("\n[INFO] Construyendo el AFD de planetas (usando la clase AFD)...")
+        states = list(mission.planets.keys())
+        alphabet = list(mission.planets.keys())
+        transitions = {}
 
-        for i in range(len(planet_names)):
-            for j in range(i+1, len(planet_names)):
-                p1 = mission.planets[planet_names[i]]
-                p2 = mission.planets[planet_names[j]]
-                coord1, coord2 = p1.coordinates(), p2.coordinates()
-                distance = self.euclidean_distance(coord1, coord2)
-                
-                safe = True
-                if not self.DISABLE_RESTRICTION_CHECK and mission.spaceship:
-                    if "evitar agujeros" in mission.spaceship.restricciones.lower():
-                        safe = self.edge_safe(coord1, coord2, mission.blackholes)
-                
-                if safe:
-                    graph[p1.name].append((p2.name, distance))
-                    graph[p2.name].append((p1.name, distance))
+        restricciones = (mission.spaceship.restricciones if mission.spaceship else "").lower()
+        max_gravedad = 5  
+        max_distancia = 60 
 
-        return graph
+        for from_name, from_planet in mission.planets.items():
+            for to_name, to_planet in mission.planets.items():
+                if from_name == to_name:
+                    continue
 
-    def dijkstra(self, graph, start, goal):
-        import heapq
-        queue = [(0, start, [start])]
-        visited = set()
+                es_seguro = True
 
-        while queue:
-            cost, node, path = heapq.heappop(queue)
-            if node == goal:
-                return cost, path
-            if node in visited:
-                continue
-            visited.add(node)
-            
-            for neighbor, weight in graph.get(node, []):
-                if neighbor not in visited:
-                    heapq.heappush(queue, (cost + weight, neighbor, path + [neighbor]))
+                # Restricción 1: evitar agujeros
+                if "evitar agujeros" in restricciones:
+                    es_seguro = self.edge_safe(
+                        from_planet.coordinates(),
+                        to_planet.coordinates(),
+                        mission.blackholes
+                    )
 
-        return float('inf'), []
+                # Restricción 2: solo gravedad baja
+                if es_seguro and "solo gravedad baja" in restricciones:
+                    if to_planet.gravity > max_gravedad:
+                        es_seguro = False
+
+                # Restricción 3: solo rutas cortas
+                if es_seguro and "solo rutas cortas" in restricciones:
+                    distancia = self.euclidean_distance(from_planet.coordinates(), to_planet.coordinates())
+                    if distancia > max_distancia:
+                        es_seguro = False
+
+                if es_seguro:
+                    transitions[(from_name, to_name)] = to_name
+
+        initial_state = mission.origin
+        final_states = [mission.destination]
+        afd = AFD(states, alphabet, transitions, initial_state, final_states)
+        print("[INFO] Instancia de AFD creada y lista para usarse.\n")
+        return afd
 
     def analyze(self, file_content):
-        """Método principal que analiza el contenido .space"""
+    
+        print("[INFO] Iniciando análisis... Validando léxico.")
+        validator = LexicalValidator()
+        try:
+            validator.validate(file_content)
+            print("[INFO] Validación léxica superada.")
+        except Exception as e:
+            print(f"[ERROR] Error léxico detectado: {e}")
+            raise ValueError(f"Error léxico detectado: {e}")
+        
         mission = self.parse_space_file(file_content)
-        graph = self.build_graph(mission)
         
-        if mission.origin not in mission.planets or mission.destination not in mission.planets:
-            raise ValueError("Origen o destino no están definidos entre los planetas")
-        
-        total_distance, route = self.dijkstra(graph, mission.origin, mission.destination)
-        if total_distance == float('inf'):
-            raise ValueError("No se encontró una ruta segura")
-        
-        # Mostrar la ruta por consola
-        print("\n" + "="*50)
-        print("RUTA ÓPTIMA ENCONTRADA")
+        afd = self.build_afd_de_planetas(mission)
+        print("[INFO] Usando la clase AFD para encontrar rutas óptimas...\n")
+        caminos = afd.obtener_caminos(max_longitud=len(mission.planets) + 2)
+        if not caminos:
+            raise ValueError("No se encontró una ruta segura (autómata).")
+        mejor = min(caminos, key=len)
+
+        # --- Construye el grafo como dict {planeta: [planetas vecinos]} para el frontend ---
+        graph = {name: [] for name in mission.planets}
+        for (from_name, to_name), _ in afd.transitions.items():
+            graph[from_name].append(to_name)
+
+        print("\n" + "=" * 50)
+        print("RUTA ÓPTIMA ENCONTRADA (vía autómata)")
         print(f"Origen: {mission.origin}")
         print(f"Destino: {mission.destination}")
-        print(f"Distancia total: {total_distance:.2f} unidades")
+        print(f"Distancia (saltos): {len(mejor)}")
         print("\nTrayectoria:")
-        for i, planet in enumerate(route, 1):
-            print(f"{i}. {planet}")
-        print("="*50 + "\n")
-        
+        actual = mission.origin
+        for i, p in enumerate(mejor, 1):
+            print(f"{i}. {actual} -> {p}")
+            actual = p
+        print("=" * 50 + "\n")
+
         return {
             'date': mission.date,
             'ast': {
@@ -266,10 +290,10 @@ class SpaceAnalyzer:
                 'spaceship_object': mission.spaceship
             },
             'route': {
-                'path': route,
-                'distance': total_distance
+                'path': [mission.origin] + mejor,
+                'distance': len(mejor)
             },
-            'graph': graph,
+            'graph': graph,  # <--- Agregado aquí
             'warnings': self._generate_warnings(mission)
         }
 
@@ -283,8 +307,6 @@ class SpaceAnalyzer:
 
     def generate_latex_report(self, mission, route_info):
         """Genera un reporte en LaTeX con la información de la misión y la ruta"""
-        
-        # Definir la cabecera del documento LaTeX
         latex_content = r"""
 \documentclass{article}
 \usepackage{graphicx}
