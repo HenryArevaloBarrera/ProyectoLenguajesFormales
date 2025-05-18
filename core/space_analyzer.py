@@ -242,7 +242,6 @@ class SpaceAnalyzer:
         return afd
 
     def analyze(self, file_content):
-    
         print("[INFO] Iniciando análisis... Validando léxico.")
         validator = LexicalValidator()
         try:
@@ -253,7 +252,7 @@ class SpaceAnalyzer:
             raise ValueError(f"Error léxico detectado: {e}")
         
         mission = self.parse_space_file(file_content)
-        
+
         afd = self.build_afd_de_planetas(mission)
         print("[INFO] Usando la clase AFD para encontrar rutas óptimas...\n")
         caminos = afd.obtener_caminos(max_longitud=len(mission.planets) + 2)
@@ -266,11 +265,14 @@ class SpaceAnalyzer:
         for (from_name, to_name), _ in afd.transitions.items():
             graph[from_name].append(to_name)
 
+        route_path = [mission.origin] + mejor
+        real_distance = self._real_route_distance(route_path, mission)
+
         print("\n" + "=" * 50)
         print("RUTA ÓPTIMA ENCONTRADA (vía autómata)")
         print(f"Origen: {mission.origin}")
         print(f"Destino: {mission.destination}")
-        print(f"Distancia (saltos): {len(mejor)}")
+        print(f"Distancia real: {real_distance:.2f}")
         print("\nTrayectoria:")
         actual = mission.origin
         for i, p in enumerate(mejor, 1):
@@ -290,12 +292,26 @@ class SpaceAnalyzer:
                 'spaceship_object': mission.spaceship
             },
             'route': {
-                'path': [mission.origin] + mejor,
-                'distance': len(mejor)
+                'path': route_path,
+                'distance': real_distance  # distancia real, no saltos
             },
-            'graph': graph,  # <--- Agregado aquí
+            'graph': graph,
             'warnings': self._generate_warnings(mission)
         }
+
+    def _real_route_distance(self, route_path, mission):
+        total = 0.0
+        for i in range(len(route_path) - 1):
+            name_a = route_path[i]
+            name_b = route_path[i+1]
+            planet_a = mission.planets.get(name_a)
+            planet_b = mission.planets.get(name_b)
+            if planet_a and planet_b:
+                total += self.euclidean_distance(
+                    planet_a.coordinates(),
+                    planet_b.coordinates()
+                )
+        return total
 
     def _generate_warnings(self, mission):
         warnings = []

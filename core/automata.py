@@ -47,6 +47,7 @@ class AFD:
         from collections import deque
         caminos = []
         queue = deque()
+        # Cada entrada en la cola es (estado_actual, recorrido_actual)
         queue.append((self.initial_state, []))
         while queue:
             actual, recorrido = queue.popleft()
@@ -58,6 +59,8 @@ class AFD:
                 key = (actual, simbolo)
                 if key in self.transitions:
                     siguiente = self.transitions[key]
-                    queue.append((siguiente, recorrido + [simbolo]))
+                    # Solo encola si el planeta (simbolo) no se ha visitado en el recorrido
+                    if simbolo not in recorrido:
+                        queue.append((siguiente, recorrido + [simbolo]))
         print(f"[INFO] Caminos encontrados: {len(caminos)}")
         return caminos
