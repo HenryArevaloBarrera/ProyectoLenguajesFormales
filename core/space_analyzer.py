@@ -3,6 +3,111 @@ import numpy as np
 from io import StringIO
 from .automata import AFD
 from core.Lexical_Validator import LexicalValidator
+from .tokenizer import tokeniza_global, tokeniza_planetas, tokeniza_agujerosnegros, tokeniza_nave, tokeniza_textos
+from .space_visualizer import draw_space_graph
+
+# ------------- AFDs y Tokenizers Sintácticos para cada sección -------------
+class AFDSyntax:
+    def __init__(self):
+        # [Global]
+        self.afd_global = AFD(
+           states = ['q0', 'q1', 'q2', 'q3', 'q4', 'qF'],
+            alphabet = ['title', 'date', 'origen', 'destino', 'fin'],
+            transitions = {
+                ('q0', 'title'): 'q1',
+                ('q1', 'date'): 'q2',
+                ('q2', 'origen'): 'q3',
+                ('q3', 'destino'): 'q4',
+                ('q4', 'fin'): 'qF'
+            },
+            initial_state='q0',
+            final_states=['qF']
+        )
+        # [Planetas]
+        self.afd_planetas = AFD(
+            states=['q0', 'q1', 'q2', 'q3', 'q4', 'qF'],
+            alphabet=['nombre', 'coordenadas', 'radio', 'gravedad', 'fin'],
+            transitions={
+                ('q0', 'nombre'): 'q1',
+                ('q1', 'coordenadas'): 'q2',
+                ('q2', 'radio'): 'q3',
+                ('q3', 'gravedad'): 'q4',
+                ('q4', 'nombre'): 'q1',
+                ('q4', 'fin'): 'qF'
+            },
+            initial_state='q0',
+            final_states=['qF']
+        )
+        # [AgujerosNegros]
+        self.afd_agujerosnegros = AFD(
+            states=['q0', 'q1', 'q2', 'q3', 'qF'],
+            alphabet=['nombre', 'coordenadas', 'radio', 'fin'],
+            transitions={
+                ('q0', 'nombre'): 'q1',
+                ('q1', 'coordenadas'): 'q2',
+                ('q2', 'radio'): 'q3',
+                ('q3', 'nombre'): 'q1',
+                ('q3', 'fin'): 'qF'
+            },
+            initial_state='q0',
+            final_states=['qF']
+        )
+        # [Nave]
+        self.afd_nave = AFD(
+            states={'q0', 'q1', 'q2', 'q3', 'q4', 'q5'},
+            alphabet={'nombre', 'velocidad', 'combustible', 'restricciones', 'fin'},
+            transitions={
+                ('q0', 'nombre'): 'q1',
+                ('q1', 'velocidad'): 'q2',
+                ('q2', 'combustible'): 'q3',
+                ('q3', 'restricciones'): 'q4',
+                ('q4', 'fin'): 'q5',
+            },
+            initial_state='q0',
+            final_states={'q5'}
+        )
+        # [Textos]
+        self.afd_textos = AFD(
+            states=['q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'qF'],
+            alphabet=['introduccion', 'descripcion', 'restricciones', 'ruta', 'conclusion', 'fin'],
+            transitions={
+                ('q0', 'introduccion'): 'q1',
+                ('q1', 'descripcion'): 'q2',
+                ('q2', 'restricciones'): 'q3',
+                ('q3', 'ruta'): 'q4',
+                ('q4', 'conclusion'): 'q5',
+                ('q5', 'fin'): 'qF'
+            },
+            initial_state='q0',
+            final_states=['qF']
+        )
+
+    def get_afd(self, section):
+        return {
+            'global': self.afd_global,
+            'planetas': self.afd_planetas,
+            'agujerosnegros': self.afd_agujerosnegros,
+            'agujeros_negros': self.afd_agujerosnegros,
+            'nave': self.afd_nave,
+            'textos': self.afd_textos
+        }.get(section, None)
+
+def tokenize_section(section_name, lines):
+    if section_name == "global":
+        return tokeniza_global(lines)
+    elif section_name == "planetas":
+        return tokeniza_planetas(lines)
+    elif section_name == "agujerosnegros":
+        return tokeniza_agujerosnegros(lines)
+    elif section_name == "nave":
+        return tokeniza_nave(lines)
+    elif section_name == "textos":
+        return tokeniza_textos(lines)
+    else:
+        return []  # o error
+
+
+# --------------------------- Clase principal -------------------------------
 
 class SpaceAnalyzer:
     DISABLE_RESTRICTION_CHECK = False
@@ -69,7 +174,7 @@ class SpaceAnalyzer:
         return parts
 
     def parse_space_file(self, file_content):
-        """Analiza contenido .space desde un string o archivo después de validación léxica"""
+        """Analiza contenido .space desde un string o archivo después de validación léxica y validación sintáctica con AFDs."""
         if isinstance(file_content, str):
             source_code = file_content
             file_like = StringIO(file_content)
@@ -84,19 +189,28 @@ class SpaceAnalyzer:
         except Exception as e:
             raise ValueError(f"Error léxico detectado: {e}")
 
+        afd_syntax = AFDSyntax()
         mission = self.Mission()
         current_section = "global"
-
+        section_lines = []
         file_like.seek(0)
+
         for line in file_like:
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
 
             if line.startswith("[") and line.endswith("]"):
+                # Antes de cambiar, valida la sección previa
+                if section_lines:
+                    self._validate_section_syntax(current_section, section_lines, afd_syntax)
                 current_section = line[1:-1].lower()
+                section_lines = []
                 continue
 
+            section_lines.append(line)
+
+            # Parseo semántico (si la sección es válida sintácticamente)
             if current_section == "global":
                 self._parse_global_line(line, mission)
             elif current_section == "planetas":
@@ -108,7 +222,19 @@ class SpaceAnalyzer:
             elif current_section == "textos":
                 self._parse_text_line(line, mission)
 
+        # Validar última sección
+        if section_lines:
+            self._validate_section_syntax(current_section, section_lines, afd_syntax)
+
         return mission
+
+    def _validate_section_syntax(self, section, lines, afd_syntax):
+        afd = afd_syntax.get_afd(section)
+        if afd:
+            tokens = tokenize_section(section, lines)
+            if not afd.acepta(tokens):
+                raise ValueError(f"Error sintáctico en la sección [{section}]")
+        # En caso de que alguna sección no tenga AFD definido, no se valida sintácticamente
 
     def _parse_global_line(self, line, mission):
         if ":" in line:
@@ -242,7 +368,7 @@ class SpaceAnalyzer:
         return afd
 
     def analyze(self, file_content):
-        print("[INFO] Iniciando análisis... Validando léxico.")
+        print("[INFO] Iniciando análisis... Validando léxico y sintaxis.")
         validator = LexicalValidator()
         try:
             validator.validate(file_content)
@@ -267,6 +393,9 @@ class SpaceAnalyzer:
 
         route_path = [mission.origin] + mejor
         real_distance = self._real_route_distance(route_path, mission)
+
+        planet_coords = {name: planet.coordinates() for name, planet in mission.planets.items()}
+        draw_space_graph(graph, route_path, planet_coords, filename='mi_mapa_3d.png')
 
         print("\n" + "=" * 50)
         print("RUTA ÓPTIMA ENCONTRADA (vía autómata)")
