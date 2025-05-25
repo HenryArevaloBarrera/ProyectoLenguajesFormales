@@ -24,29 +24,11 @@ def analyze_route():
         
         if 'error' in results:
             return jsonify(results), 400
-            
+
+        # DEVUELVE TODO EL DICCIONARIO PLANO DEL BACKEND
         return jsonify({
             'success': True,
-            'data': {
-                'mission': results['ast']['mission'],
-                'date': results.get('date', ''),
-                'planets': results['ast']['planets'],
-                'planets_data': [{'name': p.name, 'x': p.x, 'y': p.y, 'z': p.z} 
-                               for p in results['ast'].get('planet_objects', [])],
-                'blackholes': results['ast']['blackholes'],
-                'blackholes_data': [{'name': bh.name, 'x': bh.x, 'y': bh.y, 'z': bh.z, 'radius': bh.radius} 
-                                   for bh in results['ast'].get('blackhole_objects', [])],
-                'spaceship': results['ast']['spaceship'],
-                'spaceship_data': {
-                    'velocity': results['ast'].get('spaceship_object', {}).velocity if hasattr(results['ast'].get('spaceship_object'), 'velocity') else None,
-                    'fuel': results['ast'].get('spaceship_object', {}).fuel if hasattr(results['ast'].get('spaceship_object'), 'fuel') else None,
-                    'restrictions': results['ast'].get('spaceship_object', {}).restricciones if hasattr(results['ast'].get('spaceship_object'), 'restricciones') else None
-                },
-                'route': results['route']['path'],
-                'distance': results['route']['distance'],
-                'graph': results['graph']
-            },
-            'warnings': results['warnings']
+            'data': results
         })
         
     except Exception as e:

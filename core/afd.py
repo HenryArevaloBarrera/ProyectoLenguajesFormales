@@ -57,6 +57,7 @@ afd_agujerosnegros = AFD(
         ('q0', 'nombre'): 'q1',
         ('q1', 'coordenadas'): 'q2',
         ('q2', 'radio'): 'q3',
+        ('q3', 'nombre'): 'q1',
         ('q3', 'fin'): 'qF'
     },
     initial_state='q0',

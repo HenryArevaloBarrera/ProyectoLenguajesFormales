@@ -1,4 +1,7 @@
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
 from mpl_toolkits.mplot3d import Axes3D
 
 def draw_space_graph(graph, route_path=None, planet_coords=None, filename='space_map.png'):

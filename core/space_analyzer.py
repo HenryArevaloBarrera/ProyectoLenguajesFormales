@@ -5,82 +5,21 @@ from .automata import AFD
 from core.Lexical_Validator import LexicalValidator
 from .tokenizer import tokeniza_global, tokeniza_planetas, tokeniza_agujerosnegros, tokeniza_nave, tokeniza_textos
 from .space_visualizer import draw_space_graph
+from .afd import afd_global, afd_planetas, afd_agujerosnegros, afd_nave, afd_textos
 
 # ------------- AFDs y Tokenizers Sintácticos para cada sección -------------
 class AFDSyntax:
     def __init__(self):
         # [Global]
-        self.afd_global = AFD(
-           states = ['q0', 'q1', 'q2', 'q3', 'q4', 'qF'],
-            alphabet = ['title', 'date', 'origen', 'destino', 'fin'],
-            transitions = {
-                ('q0', 'title'): 'q1',
-                ('q1', 'date'): 'q2',
-                ('q2', 'origen'): 'q3',
-                ('q3', 'destino'): 'q4',
-                ('q4', 'fin'): 'qF'
-            },
-            initial_state='q0',
-            final_states=['qF']
-        )
+        self.afd_global = afd_global
         # [Planetas]
-        self.afd_planetas = AFD(
-            states=['q0', 'q1', 'q2', 'q3', 'q4', 'qF'],
-            alphabet=['nombre', 'coordenadas', 'radio', 'gravedad', 'fin'],
-            transitions={
-                ('q0', 'nombre'): 'q1',
-                ('q1', 'coordenadas'): 'q2',
-                ('q2', 'radio'): 'q3',
-                ('q3', 'gravedad'): 'q4',
-                ('q4', 'nombre'): 'q1',
-                ('q4', 'fin'): 'qF'
-            },
-            initial_state='q0',
-            final_states=['qF']
-        )
+        self.afd_planetas = afd_planetas
         # [AgujerosNegros]
-        self.afd_agujerosnegros = AFD(
-            states=['q0', 'q1', 'q2', 'q3', 'qF'],
-            alphabet=['nombre', 'coordenadas', 'radio', 'fin'],
-            transitions={
-                ('q0', 'nombre'): 'q1',
-                ('q1', 'coordenadas'): 'q2',
-                ('q2', 'radio'): 'q3',
-                ('q3', 'nombre'): 'q1',
-                ('q3', 'fin'): 'qF'
-            },
-            initial_state='q0',
-            final_states=['qF']
-        )
+        self.afd_agujerosnegros = afd_agujerosnegros
         # [Nave]
-        self.afd_nave = AFD(
-            states={'q0', 'q1', 'q2', 'q3', 'q4', 'q5'},
-            alphabet={'nombre', 'velocidad', 'combustible', 'restricciones', 'fin'},
-            transitions={
-                ('q0', 'nombre'): 'q1',
-                ('q1', 'velocidad'): 'q2',
-                ('q2', 'combustible'): 'q3',
-                ('q3', 'restricciones'): 'q4',
-                ('q4', 'fin'): 'q5',
-            },
-            initial_state='q0',
-            final_states={'q5'}
-        )
+        self.afd_nave = afd_nave
         # [Textos]
-        self.afd_textos = AFD(
-            states=['q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'qF'],
-            alphabet=['introduccion', 'descripcion', 'restricciones', 'ruta', 'conclusion', 'fin'],
-            transitions={
-                ('q0', 'introduccion'): 'q1',
-                ('q1', 'descripcion'): 'q2',
-                ('q2', 'restricciones'): 'q3',
-                ('q3', 'ruta'): 'q4',
-                ('q4', 'conclusion'): 'q5',
-                ('q5', 'fin'): 'qF'
-            },
-            initial_state='q0',
-            final_states=['qF']
-        )
+        self.afd_textos = afd_textos
 
     def get_afd(self, section):
         return {
@@ -376,9 +315,8 @@ class SpaceAnalyzer:
         except Exception as e:
             print(f"[ERROR] Error léxico detectado: {e}")
             raise ValueError(f"Error léxico detectado: {e}")
-        
-        mission = self.parse_space_file(file_content)
 
+        mission = self.parse_space_file(file_content)
         afd = self.build_afd_de_planetas(mission)
         print("[INFO] Usando la clase AFD para encontrar rutas óptimas...\n")
         caminos = afd.obtener_caminos(max_longitud=len(mission.planets) + 2)
@@ -386,7 +324,7 @@ class SpaceAnalyzer:
             raise ValueError("No se encontró una ruta segura (autómata).")
         mejor = min(caminos, key=len)
 
-        # --- Construye el grafo como dict {planeta: [planetas vecinos]} para el frontend ---
+        # Grafo como dict para frontend
         graph = {name: [] for name in mission.planets}
         for (from_name, to_name), _ in afd.transitions.items():
             graph[from_name].append(to_name)
@@ -397,37 +335,27 @@ class SpaceAnalyzer:
         planet_coords = {name: planet.coordinates() for name, planet in mission.planets.items()}
         draw_space_graph(graph, route_path, planet_coords, filename='mi_mapa_3d.png')
 
-        print("\n" + "=" * 50)
-        print("RUTA ÓPTIMA ENCONTRADA (vía autómata)")
-        print(f"Origen: {mission.origin}")
-        print(f"Destino: {mission.destination}")
-        print(f"Distancia real: {real_distance:.2f}")
-        print("\nTrayectoria:")
-        actual = mission.origin
-        for i, p in enumerate(mejor, 1):
-            print(f"{i}. {actual} -> {p}")
-            actual = p
-        print("=" * 50 + "\n")
-
+        # --- NUEVO RETURN (alineado con tu frontend) ---
         return {
             'date': mission.date,
-            'ast': {
-                'mission': mission.title,
-                'planets': list(mission.planets.keys()),
-                'planet_objects': list(mission.planets.values()),
-                'blackholes': [bh.name for bh in mission.blackholes],
-                'blackhole_objects': mission.blackholes,
-                'spaceship': mission.spaceship.name if mission.spaceship else None,
-                'spaceship_object': mission.spaceship
-            },
-            'route': {
-                'path': route_path,
-                'distance': real_distance  # distancia real, no saltos
-            },
+            'intro': mission.texts.get("instrucciones", mission.texts.get('introduccion', '')),
+            
+            'mission': mission.title,
+            'planets': list(mission.planets.keys()),
+            'planets_data': [vars(p) for p in mission.planets.values()],
+            'origen': mission.origin,
+            'destino': mission.destination,
+            'blackholes': [bh.name for bh in mission.blackholes],
+            'blackholes_data': [vars(bh) for bh in mission.blackholes],
+            'spaceship': mission.spaceship.name if mission.spaceship else None,
+            'spaceship_data': vars(mission.spaceship) if mission.spaceship else {},
+            'route': route_path,
+            'distance': real_distance,
             'graph': graph,
-            'warnings': self._generate_warnings(mission)
+            'warnings': self._generate_warnings(mission),
+            'texts': mission.texts
         }
-
+    
     def _real_route_distance(self, route_path, mission):
         total = 0.0
         for i in range(len(route_path) - 1):

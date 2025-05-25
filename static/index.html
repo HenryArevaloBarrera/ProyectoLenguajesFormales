@@ -20,22 +20,35 @@
             </div>
             <div class="editor-container">
                 <div id="line-numbers" class="line-numbers">1</div>
-                <textarea id="editor" spellcheck="false">[global]
-title: Misión a Kepler-186f
-date: 2025-04-23
-origen: Tierra
-destino: Kepler-186f
+                <textarea id="editor" spellcheck="false">
+[global]
+Title: Misión Interplanetaria: Rutas Obstaculizadas por Agujeros Negros
+date: 2035-07-10
+Origen: Planeta Alpha
+Destino: Planeta Omega
 
-[planetas]
-Nombre: Tierra, Coordenadas: (0,0,0), Radio: 6371, Gravedad: 9.8
-Nombre: Marte, Coordenadas: (50,30,20), Radio: 3389, Gravedad: 3.7
-Nombre: Kepler-186f, Coordenadas: (150,75,200), Radio: 7200, Gravedad: 11.2
+[Planetas]
+Nombre: Planeta Alpha, Coordenadas: (0,0,0), Radio: 6371, Gravedad: 9.8
+Nombre: Planeta Beta, Coordenadas: (600,400,500), Radio: 5500, Gravedad: 8.5
+Nombre: Planeta Gamma, Coordenadas: (1200,1100,800), Radio: 6000, Gravedad: 9.2
+Nombre: Planeta Delta, Coordenadas: (1700,1800,1500), Radio: 5800, Gravedad: 10.0
+Nombre: Planeta Omega, Coordenadas: (2000,2000,2000), Radio: 6500, Gravedad: 11.0
 
-[agujeros_negros]
-Nombre: BH1, Coordenadas: (80,40,60), Radio: 15
+[AgujerosNegros]
+Nombre: BH_Eclipse, Coordenadas: (500,500,700), Radio: 150
+Nombre: BH_Nebula, Coordenadas: (1000,1000,1000), Radio: 200
+Nombre: BH_Aurora, Coordenadas: (1500,1500,1500), Radio: 180
 
-[nave]
-Nombre: Explorador-X, Velocidad: 10, Combustible: 120, Restricciones: evitar agujeros</textarea>
+[Nave]
+Nombre: Nave Estelar, Velocidad: 40, Combustible: 3000, Restricciones: evitar agujeros negros
+
+[Textos]
+Introduccion: Esta misión enfrenta una ruta directa bloqueada por varios agujeros negros, obligando a la nave a tomar un camino alternativo pasando por múltiples planetas.
+Descripcion: La nave "Nave Estelar" partirá de Planeta Alpha y, debido a la presencia de BH_Eclipse, BH_Nebula y BH_Aurora a lo largo de la ruta directa, la trayectoria deberá desviarse a través de Planeta Beta, Gamma y Delta para alcanzar finalmente Planeta Omega.
+Restricciones: La nave debe mantenerse a más de 100 unidades del centro de cualquier agujero negro. El algoritmo de rutas debe optimizar la seguridad y el consumo de combustible evitando zonas de alta radiación.
+Ruta: Se espera que la trayectoria óptima sea: Planeta Alpha -> Planeta Beta -> Planeta Gamma -> Planeta Delta -> Planeta Omega.
+Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizadas, una planificación avanzada puede encontrar trayectorias seguras, allanando el camino para futuras expediciones en entornos hostiles.
+</textarea>
             </div>
             <button id="analyze-btn" class="btn btn-analyze">Analizar Misión</button>
         </div>
@@ -45,6 +58,7 @@ Nombre: Explorador-X, Velocidad: 10, Combustible: 120, Restricciones: evitar agu
             <div class="panel-header">
                 <span>Resultados del Análisis</span>
                 <button id="copy-latex-btn">Copiar LaTeX</button>
+              
             </div>
             <div id="result-container" class="result-container">
                 <div class="results-content" id="results-content">
@@ -187,105 +201,144 @@ Nombre: Explorador-X, Velocidad: 10, Combustible: 120, Restricciones: evitar agu
         }
 
         // Generar código LaTeX
-        function generateLatexCode(data) {
-            const { mission, planets, blackholes, spaceship, route, distance } = data.data;
-            
-            // Preparar datos para LaTeX
-            const planetRows = data.data.planets_data.map(p => 
-                `${p.name} & (${p.x}, ${p.y}, ${p.z}) & ${p.radius} & ${p.gravity} \\\\`
-            ).join('\n');
-            
-            const bhRows = data.data.blackholes_data.map(bh => 
-                `(${bh.x}, ${bh.y}, ${bh.z}) & ${bh.radius} \\\\`
-            ).join('\n');
-            
-            const routeItems = route.map(p => `\\item ${p}`).join('\n');
-            
-            const latexTemplate = `\\documentclass[conference]{IEEEtran}
-\\IEEEoverridecommandlockouts
-\\usepackage{cite}
-\\usepackage{amsmath,amssymb,amsfonts}
-\\usepackage{algorithmic}
-\\usepackage{float}
-\\usepackage{graphicx}
-\\usepackage{textcomp}
-\\usepackage{tikz}
-\\usetikzlibrary{arrows.meta}
-\\usetikzlibrary{positioning}
-\\usepackage[utf8]{inputenc}
+       function generateLatexCode(data) {
+                const { mission, planets, blackholes, spaceship, route, distance, texts } = data.data;
 
-\\title{${mission || 'Misión Espacial'}}
-\\author{Compilador de Misiones Espaciales}
-\\date{${data.data.date || '2025-01-01'}}
+                // Preparar datos para LaTeX
+                const planetRows = data.data.planets_data.map(p => 
+                    `${p.name} & (${p.x}, ${p.y}, ${p.z}) & ${p.radius} & ${p.gravity} \\\\`
+                ).join('\n');
+                
+                const bhRows = data.data.blackholes_data.map(bh => 
+                    `(${bh.x}, ${bh.y}, ${bh.z}) & ${bh.radius} \\\\`
+                ).join('\n');
+                
+                const routeItems = route.map(p => `\\item ${p}`).join('\n');
 
-\\begin{document}
+                // Agregar textos personalizados o fallback si falta
+                const intro = texts?.introduccion || "No especificada";
+                const descripcion = texts?.descripcion || "No especificada";
+                const restricciones = texts?.restricciones || "No especificada";
+                const rutaTexto = texts?.ruta || "No especificada";
+                const conclusion = texts?.conclusion || "No especificada";
 
-\\maketitle
+                const latexTemplate = `
+            \\documentclass[conference]{IEEEtran}
+            \\IEEEoverridecommandlockouts
+            \\usepackage{cite}
+            \\usepackage{amsmath,amssymb,amsfonts}
+            \\usepackage{algorithmic}
+            \\usepackage{float}
+            \\usepackage{graphicx}
+            \\usepackage{textcomp}
+            \\usepackage{tikz}
+            \\usetikzlibrary{arrows.meta}
+            \\usetikzlibrary{positioning}
+            \\usepackage[utf8]{inputenc}
 
-\\begin{abstract}
-Informe generado automáticamente por Space Mission Analyzer.
-\\end{abstract}
+            \\title{${mission || 'Misión Espacial'}}
+            \\author{Compilador de Misiones Espaciales}
+            \\date{${data.data.date || '2025-01-01'}}
 
-\\section{Introducción}
-Informe de la misión espacial.
+            \\begin{document}
 
-\\section{Descripción de la Ruta}
-Ruta calculada entre ${route[0]} y ${route[route.length - 1]}.
+            \\maketitle
 
-\\section{Ruta Calculada}
-\\begin{itemize}
-${routeItems}
-\\end{itemize}
+            \\begin{abstract}
+            ${intro}
+            \\end{abstract}
 
-\\textbf{Distancia total:} ${distance.toFixed(2)} unidades
+            \\section{Introducción}
+            ${intro}
 
-\\section{Restricciones}
-${spaceship?.restrictions || 'Ninguna restricción especificada'}
+            \\section{Descripción}
+            ${descripcion}
 
-\\section{Planetas}
-\\begin{table}[H]
-\\centering
-\\begin{tabular}{|l|l|l|l|}
-\\hline
-\\textbf{Planeta} & \\textbf{Coordenadas (x, y, z)} & \\textbf{Radio} & \\textbf{Gravedad} \\\\
-\\hline
-${planetRows}
-\\hline
-\\end{tabular}
-\\caption{Tabla de planetas en la misión}
-\\end{table}
+            \\section{Restricciones}
+            ${restricciones}
 
-\\section{Agujeros Negros}
-\\begin{table}[H]
-\\centering
-\\begin{tabular}{|l|l|}
-\\hline
-\\textbf{Posición (x, y, z)} & \\textbf{Radio} \\\\
-\\hline
-${bhRows}
-\\hline
-\\end{tabular}
-\\caption{Tabla de agujeros negros en el trayecto}
-\\end{table}
+            \\section{Ruta Esperada}
+            ${rutaTexto}
 
-\\section{Conclusión}
-Misión completada con éxito.
+            \\section{Ruta Calculada}
+            Ruta calculada entre ${route[0]} y ${route[route.length - 1]}.
+            \\begin{itemize}
+            ${routeItems}
+            \\end{itemize}
 
-\\end{document}`;
+            \\textbf{Distancia total:} ${distance.toFixed(2)} unidades
 
-            latexCode.textContent = latexTemplate;
-        }
+            \\begin{figure}[H]
+                \\centering
+                \\includegraphics[width=0.75\\linewidth]{mi_mapa_3d.png}
+                \\caption{Ruta óptima proyectada en el espacio tridimensional}
+                \\label{fig:space-3d-route}
+            \\end{figure}
+            \\section{Planetas}
+            \\begin{table}[H]
+            \\centering
+            \\begin{tabular}{|l|l|l|l|}
+            \\hline
+            \\textbf{Planeta} & \\textbf{Coordenadas (x, y, z)} & \\textbf{Radio} & \\textbf{Gravedad} \\\\
+            \\hline
+            ${planetRows}
+            \\hline
+            \\end{tabular}
+            \\caption{Tabla de planetas en la misión}
+            \\end{table}
 
+            \\section{Agujeros Negros}
+            \\begin{table}[H]
+            \\centering
+            \\begin{tabular}{|l|l|}
+            \\hline
+            \\textbf{Posición (x, y, z)} & \\textbf{Radio} \\\\
+            \\hline
+            ${bhRows}
+            \\hline
+            \\end{tabular}
+            \\caption{Tabla de agujeros negros en el trayecto}
+            \\end{table}
+
+            \\section{Conclusión}
+            ${conclusion}
+
+            \\end{document}
+            `;
+
+                latexCode.textContent = latexTemplate;
+            }
         // Renderizar resultados
-        function renderResults(data) {
-            const { mission, planets, blackholes, spaceship, route, distance, graph, warnings } = data.data;
-            
+        function renderResults(data) { 
+            const {intro, mission, planets,origen,destino, blackholes, spaceship, route, distance, graph, warnings, texts} = data.data;
+
             let html = `
                 <div class="mission-card">
                     <h3 class="mission-title">${mission || 'Misión sin nombre'}</h3>
                     <p><strong>Fecha:</strong> ${data.data.date || 'No especificada'}</p>
-                </div>
+            `;
 
+            // Mostrar los textos de misión si existen
+            if (texts) {
+                html += `
+                    <div class="mission-section">
+                        <h4>Introducción</h4>
+                        <p>${texts.introduccion || 'No especificada'}</p>
+                        <h4>Descripción</h4>
+                        <p>${texts.descripcion || 'No especificada'}</p>
+                        <h4>Restricciones</h4>
+                        <p>${texts.restricciones || 'No especificada'}</p>
+                        <h4>Ruta Esperada</h4>
+                        <p>${texts.ruta || 'No especificada'}</p>
+                        <h4>Conclusión</h4>
+                        <p>${texts.conclusion || 'No especificada'}</p>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+
+            html += `
                 <div class="mission-card">
                     <h3 class="mission-title">Ruta Calculada</h3>
                     <p><strong>Origen:</strong> ${route[0]}</p>
@@ -396,6 +449,9 @@ Misión completada con éxito.
         // Inicialización
         updateLineNumbers();
         switchTab('results'); // Mostrar pestaña de resultados por defecto
+
+        
+
     </script>
 </body>
 </html>
