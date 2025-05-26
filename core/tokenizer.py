@@ -10,15 +10,13 @@ def tokeniza_global(lineas):
             tokens.append("origen")
         elif l.startswith("destino:"):
             tokens.append("destino")
-    tokens.append("fin")
-    print("TOKENS GLOBAL:", tokens) 
+    print("TOKENS GLOBAL:", tokens)
     return tokens
 
 def tokeniza_planetas(lineas):
     tokens = []
     for linea in lineas:
         l = linea.strip().lower()
-        # Dividir la línea en partes separadas por comas
         partes = [parte.strip() for parte in l.split(',')]
         for parte in partes:
             if parte.startswith("nombre:"):
@@ -29,10 +27,8 @@ def tokeniza_planetas(lineas):
                 tokens.append("radio")
             elif parte.startswith("gravedad:"):
                 tokens.append("gravedad")
-    tokens.append("fin")
+    print("TOKENS PLANETAS:", tokens)
     return tokens
-
-
 
 def tokeniza_agujerosnegros(lineas):
     print("LINEAS AGUJEROS NEGROS:", lineas)
@@ -47,23 +43,15 @@ def tokeniza_agujerosnegros(lineas):
             tokens.append("radio")
         if "masa:" in l:
             tokens.append("masa")
-    tokens.append("fin")
     print("TOKENS AGUJEROS:", tokens)
     return tokens
 
-
 def tokeniza_nave(lineas):
-    """
-    Tokeniza la línea única de la sección [nave] con todos los campos separados por comas.
-    """
     tokens = []
     if not lineas:
-        return ["fin"]
-
-    # Tomamos solo la primera línea porque se espera una sola línea con todos los campos
+        return tokens
     contenido = lineas[0].strip().lower()
     partes = [p.strip() for p in contenido.split(",")]
-
     for parte in partes:
         if parte.startswith("nombre:"):
             tokens.append("nombre")
@@ -73,15 +61,10 @@ def tokeniza_nave(lineas):
             tokens.append("combustible")
         elif parte.startswith("restricciones:"):
             tokens.append("restricciones")
-        else:
-            tokens.append("desconocido")  # útil para detectar errores
-    tokens.append("fin")
+    print("TOKENS NAVE:", tokens)
     return tokens
 
 def tokeniza_textos(lineas):
-    """
-    Tokeniza las líneas de la sección [Textos] para el AFD sintáctico.
-    """
     tokens = []
     for linea in lineas:
         l = linea.strip().lower()
@@ -95,5 +78,4 @@ def tokeniza_textos(lineas):
             tokens.append("ruta")
         elif l.startswith("conclusion:"):
             tokens.append("conclusion")
-    tokens.append("fin")
     return tokens

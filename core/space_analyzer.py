@@ -6,6 +6,7 @@ from core.Lexical_Validator import LexicalValidator
 from .tokenizer import tokeniza_global, tokeniza_planetas, tokeniza_agujerosnegros, tokeniza_nave, tokeniza_textos
 from .space_visualizer import draw_space_graph
 from .afd import afd_global, afd_planetas, afd_agujerosnegros, afd_nave, afd_textos
+from .regular_grammar import grammar_global, grammar_planetas, grammar_bh, grammar_nave, grammar_textos
 
 # ------------- AFDs y Tokenizers Sintácticos para cada sección -------------
 class AFDSyntax:
@@ -44,7 +45,6 @@ def tokenize_section(section_name, lines):
         return tokeniza_textos(lines)
     else:
         return []  # o error
-
 
 # --------------------------- Clase principal -------------------------------
 
@@ -92,6 +92,26 @@ class SpaceAnalyzer:
             self.spaceship = None
             self.texts = {}
 
+    def _validate_section_grammar(self, section, lines):
+        tokens = tokenize_section(section, lines)  # Usa el tokenizador adecuado
+        if section == "global":
+            if not grammar_global.recognizes(tokens):
+                raise ValueError(f"Estructura inválida en la sección [{section}] según la gramática regular.")
+        elif section == "planetas":
+                if not grammar_planetas.recognizes(tokens):
+                    raise ValueError(f"Estructura inválida en la sección [{section}] (planeta incompleto o campos desordenados) según la gramática regular.")
+        elif section in {"agujerosnegros", "agujeros_negros"}:
+            for i in range(0, len(tokens)):
+                if not grammar_bh.recognizes(tokens):
+                    raise ValueError(f"Estructura inválida en la sección [{section}] (agujero negro incompleto o campos desordenados) según la gramática regular.")
+        elif section == "nave":
+            if not grammar_nave.recognizes(tokens):
+                print("[DEBUG][NAVE] tokens:", tokens)
+                raise ValueError(f"Estructura inválida en la sección [{section}] según la gramática regular.")
+        elif section == "textos":
+            if not grammar_textos.recognizes(tokens):
+                raise ValueError(f"Estructura inválida en la sección [{section}] según la gramática regular.")
+        print(f"[DEBUG][GRAMMAR] Sección: {section}, Tokens: {tokens}")
     @staticmethod
     def split_outside_parentheses(s):
         parts = []
@@ -142,13 +162,15 @@ class SpaceAnalyzer:
             if line.startswith("[") and line.endswith("]"):
                 # Antes de cambiar, valida la sección previa
                 if section_lines:
+                    
                     self._validate_section_syntax(current_section, section_lines, afd_syntax)
+                    self._validate_section_grammar(current_section, section_lines)
                 current_section = line[1:-1].lower()
                 section_lines = []
                 continue
 
             section_lines.append(line)
-
+            # Validar la sección actual
             # Parseo semántico (si la sección es válida sintácticamente)
             if current_section == "global":
                 self._parse_global_line(line, mission)
@@ -164,7 +186,7 @@ class SpaceAnalyzer:
         # Validar última sección
         if section_lines:
             self._validate_section_syntax(current_section, section_lines, afd_syntax)
-
+            self._validate_section_grammar(current_section, section_lines)
         return mission
 
     def _validate_section_syntax(self, section, lines, afd_syntax):

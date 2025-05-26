@@ -15,82 +15,76 @@ class AFD:
                 return False  # No hay transición válida
         return estado_actual in self.final_states
 
-
-# ----------- AFDs de ejemplo para distintas secciones ------------------
+# ----------- AFDs de ejemplo para distintas secciones (SIN 'fin') ------------------
 
 # AFD para la sección [Global]
 afd_global = AFD(
-    states=['q0', 'q1', 'q2', 'q3', 'q4', 'qF'],
-    alphabet=['title', 'date', 'origen', 'destino', 'fin'],
+    states=['q0', 'q1', 'q2', 'q3', 'q4'],
+    alphabet=['title', 'date', 'origen', 'destino'],
     transitions={
         ('q0', 'title'): 'q1',
         ('q1', 'date'): 'q2',
         ('q2', 'origen'): 'q3',
-        ('q3', 'destino'): 'q4',
-        ('q4', 'fin'): 'qF'
+        ('q3', 'destino'): 'q4'
     },
     initial_state='q0',
-    final_states=['qF']
+    final_states=['q4']
 )
 
 # AFD para la sección [Planetas]
 afd_planetas = AFD(
-    states=['q0', 'q1', 'q2', 'q3', 'q4', 'qF'],
-    alphabet=['nombre', 'coordenadas', 'radio', 'gravedad', 'fin'],
-    transitions = {
-    ('q0', 'nombre'): 'q1',
-    ('q1', 'coordenadas'): 'q2',
-    ('q2', 'radio'): 'q3',
-    ('q3', 'gravedad'): 'q4',
-    ('q4', 'nombre'): 'q1',  # Permite empezar un nuevo planeta después de uno terminado
-    ('q4', 'fin'): 'qF',     # Permite terminar la cadena tras uno o varios planetas
-    },
-    initial_state='q0',
-    final_states=['qF']
-)
-
-# AFD para la sección [AgujerosNegros]
-afd_agujerosnegros = AFD(
-    states=['q0', 'q1', 'q2', 'q3', 'qF'],
-    alphabet=['nombre', 'coordenadas', 'radio', 'fin'],
+    states=['q0', 'q1', 'q2', 'q3', 'q4'],
+    alphabet=['nombre', 'coordenadas', 'radio', 'gravedad'],
     transitions={
         ('q0', 'nombre'): 'q1',
         ('q1', 'coordenadas'): 'q2',
         ('q2', 'radio'): 'q3',
-        ('q3', 'nombre'): 'q1',
-        ('q3', 'fin'): 'qF'
+        ('q3', 'gravedad'): 'q4',
+        ('q4', 'nombre'): 'q1',  # Permite empezar un nuevo planeta después de uno terminado
     },
     initial_state='q0',
-    final_states=['qF']
+    final_states=['q4']
+)
+
+# AFD para la sección [AgujerosNegros]
+afd_agujerosnegros = AFD(
+    states=['q0', 'q1', 'q2', 'q3'],
+    alphabet=['nombre', 'coordenadas', 'radio'],
+    transitions={
+        ('q0', 'nombre'): 'q1',
+        ('q1', 'coordenadas'): 'q2',
+        ('q2', 'radio'): 'q3',
+        ('q3', 'nombre'): 'q1',  # Permite empezar un nuevo agujero después de uno terminado
+    },
+    initial_state='q0',
+    final_states=['q3']
 )
 
 # AFD para la sección [Nave]
 afd_nave = AFD(
-    states={"q0", "q1", "q2", "q3", "q4", "qf"},
-    alphabet={"nombre", "velocidad", "combustible", "restricciones", "fin"},
+    states=["q0", "q1", "q2", "q3", "q4"],
+    alphabet={"nombre", "velocidad", "combustible", "restricciones"},
     transitions={
         ("q0", "nombre"): "q1",
         ("q1", "velocidad"): "q2",
         ("q2", "combustible"): "q3",
-        ("q3", "restricciones"): "q4",
-        ("q4", "fin"): "qf"
+        ("q3", "restricciones"): "q4"
     },
     initial_state="q0",
-    final_states={"qf"}
+    final_states={"q4"}
 )
 
 # AFD para la sección [Textos]
 afd_textos = AFD(
-    states=['q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'qF'],
-    alphabet=['introduccion', 'descripcion', 'restricciones', 'ruta', 'conclusion', 'fin'],
+    states=['q0', 'q1', 'q2', 'q3', 'q4', 'q5'],
+    alphabet=['introduccion', 'descripcion', 'restricciones', 'ruta', 'conclusion'],
     transitions={
         ('q0', 'introduccion'): 'q1',
         ('q1', 'descripcion'): 'q2',
         ('q2', 'restricciones'): 'q3',
         ('q3', 'ruta'): 'q4',
-        ('q4', 'conclusion'): 'q5',
-        ('q5', 'fin'): 'qF'
+        ('q4', 'conclusion'): 'q5'
     },
     initial_state='q0',
-    final_states=['qF']
+    final_states=['q5']
 )
