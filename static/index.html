@@ -5,12 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Space Mission Analyzer</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&family=Roboto+Mono&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
     <header class="header">
         <div class="logo">Space <span>Mission Analyzer</span></div>
     </header>
+
+    <!-- Mensaje de error global -->
 
     <div class="main-container">
         <!-- Panel del Editor -->
@@ -58,12 +60,27 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
             <div class="panel-header">
                 <span>Resultados del Análisis</span>
                 <button id="copy-latex-btn">Copiar LaTeX</button>
-              
             </div>
             <div id="result-container" class="result-container">
                 <div class="results-content" id="results-content">
-                    <div class="mission-card">
-                        <p>Ingresa un código .space y haz clic en "Analizar Misión"</p>
+                    <!-- Paneles de progreso SIEMPRE visibles arriba -->
+                    <div id="global-error" style="display:none;"></div>
+
+                    <div id="progress-machines">
+                        <div class="mission-card">
+                            <h3>Progreso Máquina Mealy</h3>
+                            <div id="mealy-messages"></div>
+                        </div>
+                        <div class="mission-card">
+                            <h3>Progreso Máquina Moore</h3>
+                            <div id="moore-messages"></div>
+                        </div>
+                    </div>
+                    <!-- Aquí van los resultados finales -->
+                    <div id="final-results">
+                        <div class="mission-card">
+                            <p>Ingresa un código .space y haz clic en "Analizar Misión"</p>
+                        </div>
                     </div>
                 </div>
                 <div class="latex-tab">
@@ -74,6 +91,7 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
                     <div class="latex-tab-content" id="latex-content">
                         <pre id="latex-code">El código LaTeX aparecerá aquí después del análisis</pre>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -84,16 +102,28 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
         const editor = document.getElementById('editor');
         const lineNumbers = document.getElementById('line-numbers');
         const analyzeBtn = document.getElementById('analyze-btn');
-        const resultContainer = document.getElementById('result-container');
         const resultsContent = document.getElementById('results-content');
         const latexCode = document.getElementById('latex-code');
         const copyLatexBtn = document.getElementById('copy-latex-btn');
+        const globalError = document.getElementById('global-error');
+        const finalResults = document.getElementById('final-results');
+        const mealyMessages = () => document.getElementById('mealy-messages');
+        const mooreMessages = () => document.getElementById('moore-messages');
+
+        // Mostrar error global arriba
+        function showGlobalError(message) {
+            globalError.innerHTML = `<div class="error" style="margin-bottom:16px;text-align:center;">${message}</div>`;
+            globalError.style.display = 'block';
+        }
+        function hideGlobalError() {
+            globalError.innerHTML = '';
+            globalError.style.display = 'none';
+        }
 
         // Actualizar números de línea
         function updateLineNumbers() {
             const lines = editor.value.split('\n');
             lineNumbers.innerHTML = '';
-            
             lines.forEach((_, i) => {
                 const lineNum = document.createElement('div');
                 lineNum.textContent = i + 1;
@@ -105,7 +135,6 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
         function highlightCurrentLine() {
             const cursorPos = editor.selectionStart;
             const currentLine = editor.value.substr(0, cursorPos).split('\n').length;
-            
             Array.from(lineNumbers.children).forEach((line, i) => {
                 line.classList.toggle('highlight', i === currentLine - 1);
             });
@@ -115,11 +144,7 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
         function switchTab(tabName) {
             const latexContent = document.getElementById('latex-content');
             const tabButtons = document.querySelectorAll('.tab-button');
-            
-            tabButtons.forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
+            tabButtons.forEach(btn => btn.classList.remove('active'));
             if (tabName === 'results') {
                 resultsContent.style.display = 'block';
                 latexContent.style.display = 'none';
@@ -139,8 +164,6 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
             window.getSelection().addRange(range);
             document.execCommand('copy');
             window.getSelection().removeAllRanges();
-            
-            // Feedback visual
             const originalText = copyLatexBtn.textContent;
             copyLatexBtn.textContent = '¡Copiado!';
             setTimeout(() => {
@@ -148,25 +171,19 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
             }, 2000);
         });
 
-        // Analizar código
-        async function analyzeMission() {
-            const code = editor.value.trim();
-            
+        // Analizar código (solo llamada por analyzeMissionStream después del streaming)
+        async function analyzeMission(code) {
+            hideGlobalError();
             if (!code) {
-                resultsContent.innerHTML = `
-                    <div class="error">
-                        Por favor ingresa un código .space para analizar
-                    </div>
-                `;
+                showGlobalError('Por favor ingresa un código .space para analizar');
                 return;
             }
-
-            resultsContent.innerHTML = `
+            // Muestra mensaje de procesamiento en final-results sin borrar los paneles de progreso
+            document.getElementById('final-results').innerHTML = `
                 <div class="mission-card">
-                    <p>Analizando misión espacial...</p>
+                    <p>Procesando resultados finales...</p>
                 </div>
             `;
-
             try {
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
@@ -175,150 +192,175 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
                     },
                     body: JSON.stringify({ code })
                 });
-
                 const data = await response.json();
-
                 if (!data.success) {
-                    resultsContent.innerHTML = `
-                        <div class="error">
-                            <strong>Error en el análisis:</strong> ${data.error || 'Error desconocido'}
-                        </div>
-                    `;
+                    showGlobalError(`<strong>Error en el análisis:</strong> ${data.error || 'Error desconocido'}`);
                     return;
                 }
-
-                // Formatear resultados
                 renderResults(data);
                 generateLatexCode(data);
-                
             } catch (error) {
-                resultsContent.innerHTML = `
-                    <div class="error">
-                        <strong>Error de conexión:</strong> ${error.message}
-                    </div>
-                `;
+                showGlobalError(`<strong>Error de conexión:</strong> ${error.message}`);
             }
         }
 
-        // Generar código LaTeX
-       function generateLatexCode(data) {
-                const { mission, planets, blackholes, spaceship, route, distance, texts } = data.data;
+        // Analizar código y mostrar progreso y luego resultados
+        async function analyzeMissionStream() {
+            hideGlobalError();
+            const code = editor.value.trim();
+            if (!code) {
+                showGlobalError('Por favor ingresa un código .space para analizar');
+                return;
+            }
 
-                // Preparar datos para LaTeX
-                const planetRows = data.data.planets_data.map(p => 
-                    `${p.name} & (${p.x}, ${p.y}, ${p.z}) & ${p.radius} & ${p.gravity} \\\\`
-                ).join('\n');
-                
-                const bhRows = data.data.blackholes_data.map(bh => 
-                    `(${bh.x}, ${bh.y}, ${bh.z}) & ${bh.radius} \\\\`
-                ).join('\n');
-                
-                const routeItems = route.map(p => `\\item ${p}`).join('\n');
-
-                // Agregar textos personalizados o fallback si falta
-                const intro = texts?.introduccion || "No especificada";
-                const descripcion = texts?.descripcion || "No especificada";
-                const restricciones = texts?.restricciones || "No especificada";
-                const rutaTexto = texts?.ruta || "No especificada";
-                const conclusion = texts?.conclusion || "No especificada";
-
-                const latexTemplate = `
-            \\documentclass[conference]{IEEEtran}
-            \\IEEEoverridecommandlockouts
-            \\usepackage{cite}
-            \\usepackage{amsmath,amssymb,amsfonts}
-            \\usepackage{algorithmic}
-            \\usepackage{float}
-            \\usepackage{graphicx}
-            \\usepackage{textcomp}
-            \\usepackage{tikz}
-            \\usetikzlibrary{arrows.meta}
-            \\usetikzlibrary{positioning}
-            \\usepackage[utf8]{inputenc}
-
-            \\title{${mission || 'Misión Espacial'}}
-            \\author{Compilador de Misiones Espaciales}
-            \\date{${data.data.date || '2025-01-01'}}
-
-            \\begin{document}
-
-            \\maketitle
-
-            \\begin{abstract}
-            ${intro}
-            \\end{abstract}
-
-            \\section{Introducción}
-            ${intro}
-
-            \\section{Descripción}
-            ${descripcion}
-
-            \\section{Restricciones}
-            ${restricciones}
-
-            \\section{Ruta Esperada}
-            ${rutaTexto}
-
-            \\section{Ruta Calculada}
-            Ruta calculada entre ${route[0]} y ${route[route.length - 1]}.
-            \\begin{itemize}
-            ${routeItems}
-            \\end{itemize}
-
-            \\textbf{Distancia total:} ${distance.toFixed(2)} unidades
-
-            \\begin{figure}[H]
-                \\centering
-                \\includegraphics[width=0.75\\linewidth]{mi_mapa_3d.png}
-                \\caption{Ruta óptima proyectada en el espacio tridimensional}
-                \\label{fig:space-3d-route}
-            \\end{figure}
-            \\section{Planetas}
-            \\begin{table}[H]
-            \\centering
-            \\begin{tabular}{|l|l|l|l|}
-            \\hline
-            \\textbf{Planeta} & \\textbf{Coordenadas (x, y, z)} & \\textbf{Radio} & \\textbf{Gravedad} \\\\
-            \\hline
-            ${planetRows}
-            \\hline
-            \\end{tabular}
-            \\caption{Tabla de planetas en la misión}
-            \\end{table}
-
-            \\section{Agujeros Negros}
-            \\begin{table}[H]
-            \\centering
-            \\begin{tabular}{|l|l|}
-            \\hline
-            \\textbf{Posición (x, y, z)} & \\textbf{Radio} \\\\
-            \\hline
-            ${bhRows}
-            \\hline
-            \\end{tabular}
-            \\caption{Tabla de agujeros negros en el trayecto}
-            \\end{table}
-
-            \\section{Conclusión}
-            ${conclusion}
-
-            \\end{document}
+            // Limpiar mensajes previos de progreso y resultados, pero NO los paneles
+            mealyMessages().innerHTML = '';
+            mooreMessages().innerHTML = '';
+            document.getElementById('final-results').innerHTML = `
+                <div class="mission-card">
+                    <p>Analizando misión espacial...</p>
+                </div>
             `;
 
-                latexCode.textContent = latexTemplate;
-            }
-        // Renderizar resultados
-        function renderResults(data) { 
-            const {intro, mission, planets,origen,destino, blackholes, spaceship, route, distance, graph, warnings, texts} = data.data;
+            let streamDone = false;
+            const evtSource = new EventSource(`/api/analyze/progress?code=${encodeURIComponent(code)}`);
 
+            evtSource.onmessage = async function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'mealy') {
+                    const p = document.createElement('p');
+                    p.textContent = data.message;
+                    mealyMessages().appendChild(p);
+                } else if (data.type === 'moore') {
+                    const p = document.createElement('p');
+                    p.textContent = data.message;
+                    mooreMessages().appendChild(p);
+                } else if (data.type === 'done') {
+                    streamDone = true;
+                    evtSource.close();
+                    await analyzeMission(code); // Pasar el código original
+                }
+            };
+
+            evtSource.onerror = function(event) {
+                if (!streamDone) {
+                    showGlobalError('<strong>Error de conexión:</strong> No se pudo analizar la misión.');
+                }
+                evtSource.close();
+            };
+        }
+
+        // Generar código LaTeX (igual que antes)
+        function generateLatexCode(data) {
+            // ... igual que antes ...
+            const { mission, planets, blackholes, spaceship, route, distance, texts } = data.data;
+            const planetRows = data.data.planets_data.map(p =>
+                `${p.name} & (${p.x}, ${p.y}, ${p.z}) & ${p.radius} & ${p.gravity} \\\\`
+            ).join('\n');
+            const bhRows = data.data.blackholes_data.map(bh =>
+                `(${bh.x}, ${bh.y}, ${bh.z}) & ${bh.radius} \\\\`
+            ).join('\n');
+            const routeItems = route.map(p => `\\item ${p}`).join('\n');
+            const intro = texts?.introduccion || "No especificada";
+            const descripcion = texts?.descripcion || "No especificada";
+            const restricciones = texts?.restricciones || "No especificada";
+            const rutaTexto = texts?.ruta || "No especificada";
+            const conclusion = texts?.conclusion || "No especificada";
+            const latexTemplate = `
+        \\documentclass[conference]{IEEEtran}
+        \\IEEEoverridecommandlockouts
+        \\usepackage{cite}
+        \\usepackage{amsmath,amssymb,amsfonts}
+        \\usepackage{algorithmic}
+        \\usepackage{float}
+        \\usepackage{graphicx}
+        \\usepackage{textcomp}
+        \\usepackage{tikz}
+        \\usetikzlibrary{arrows.meta}
+        \\usetikzlibrary{positioning}
+        \\usepackage[utf8]{inputenc}
+
+        \\title{${mission || 'Misión Espacial'}}
+        \\author{Compilador de Misiones Espaciales}
+        \\date{${data.data.date || '2025-01-01'}}
+
+        \\begin{document}
+
+        \\maketitle
+
+        \\begin{abstract}
+        ${intro}
+        \\end{abstract}
+
+        \\section{Introducción}
+        ${intro}
+
+        \\section{Descripción}
+        ${descripcion}
+
+        \\section{Restricciones}
+        ${restricciones}
+
+        \\section{Ruta Esperada}
+        ${rutaTexto}
+
+        \\section{Ruta Calculada}
+        Ruta calculada entre ${route[0]} y ${route[route.length - 1]}.
+        \\begin{itemize}
+        ${routeItems}
+        \\end{itemize}
+
+        \\textbf{Distancia total:} ${distance.toFixed(2)} unidades
+
+        \\begin{figure}[H]
+            \\centering
+            \\includegraphics[width=0.75\\linewidth]{mi_mapa_3d.png}
+            \\caption{Ruta óptima proyectada en el espacio tridimensional}
+            \\label{fig:space-3d-route}
+        \\end{figure}
+        \\section{Planetas}
+        \\begin{table}[H]
+        \\centering
+        \\begin{tabular}{|l|l|l|l|}
+        \\hline
+        \\textbf{Planeta} & \\textbf{Coordenadas (x, y, z)} & \\textbf{Radio} & \\textbf{Gravedad} \\\\
+        \\hline
+        ${planetRows}
+        \\hline
+        \\end{tabular}
+        \\caption{Tabla de planetas en la misión}
+        \\end{table}
+
+        \\section{Agujeros Negros}
+        \\begin{table}[H]
+        \\centering
+        \\begin{tabular}{|l|l|}
+        \\hline
+        \\textbf{Posición (x, y, z)} & \\textbf{Radio} \\\\
+        \\hline
+        ${bhRows}
+        \\hline
+        \\end{tabular}
+        \\caption{Tabla de agujeros negros en el trayecto}
+        \\end{table}
+
+        \\section{Conclusión}
+        ${conclusion}
+
+        \\end{document}
+        `;
+            latexCode.textContent = latexTemplate;
+        }
+
+        // Renderizar resultados (ahora solo reemplaza el div final-results)
+        function renderResults(data) {
+            // ... igual que antes ...
+            const {intro, mission, planets,origen,destino, blackholes, spaceship, route, distance, graph, warnings, texts} = data.data;
             let html = `
                 <div class="mission-card">
                     <h3 class="mission-title">${mission || 'Misión sin nombre'}</h3>
                     <p><strong>Fecha:</strong> ${data.data.date || 'No especificada'}</p>
             `;
-
-            // Mostrar los textos de misión si existen
             if (texts) {
                 html += `
                     <div class="mission-section">
@@ -335,9 +377,7 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
                     </div>
                 `;
             }
-
             html += `</div>`;
-
             html += `
                 <div class="mission-card">
                     <h3 class="mission-title">Ruta Calculada</h3>
@@ -346,7 +386,6 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
                     <div class="route-path">${route.join(' → ')}</div>
                     <p><strong>Distancia total:</strong> ${distance.toFixed(2)} unidades</p>
                 </div>
-
                 <div class="mission-card">
                     <h3 class="mission-title">Detalles de la Misión</h3>
                     <table class="data-table">
@@ -355,8 +394,6 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
                             <th>Coordenadas</th>
                         </tr>
             `;
-
-            // Planetas
             planets.forEach(planet => {
                 const planetData = data.data.planets_data.find(p => p.name === planet);
                 if (planetData) {
@@ -368,11 +405,9 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
                     `;
                 }
             });
-
             html += `
                     </table>
                 </div>
-
                 <div class="mission-card">
                     <h3 class="mission-title">Nave Espacial</h3>
                     <p><strong>Nombre:</strong> ${spaceship}</p>
@@ -381,8 +416,6 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
                     <p><strong>Restricciones:</strong> ${data.data.spaceship_data?.restrictions || 'Ninguna'}</p>
                 </div>
             `;
-            
-            // Agujeros negros
             if (blackholes.length > 0) {
                 html += `
                     <div class="mission-card">
@@ -394,7 +427,6 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
                                 <th>Radio</th>
                             </tr>
                 `;
-
                 blackholes.forEach(bh => {
                     const bhData = data.data.blackholes_data.find(b => b.name === bh);
                     if (bhData) {
@@ -407,22 +439,17 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
                         `;
                     }
                 });
-
                 html += `
                         </table>
                     </div>
                 `;
             }
-
-            // Grafo de conexiones
             html += `
                 <div class="mission-card">
                     <h3 class="mission-title">Grafo de Conexiones</h3>
                     <pre class="graph-view">${JSON.stringify(graph, null, 2)}</pre>
                 </div>
             `;
-
-            // Advertencias
             if (warnings && warnings.length > 0) {
                 html += `
                     <div class="warning">
@@ -433,8 +460,7 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
                     </div>
                 `;
             }
-
-            resultsContent.innerHTML = html;
+            document.getElementById('final-results').innerHTML = html;
         }
 
         // Event Listeners
@@ -444,14 +470,11 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
         });
         editor.addEventListener('click', highlightCurrentLine);
         editor.addEventListener('keyup', highlightCurrentLine);
-        analyzeBtn.addEventListener('click', analyzeMission);
+        analyzeBtn.addEventListener('click', analyzeMissionStream);
 
         // Inicialización
         updateLineNumbers();
-        switchTab('results'); // Mostrar pestaña de resultados por defecto
-
-        
-
+        switchTab('results');
     </script>
 </body>
 </html>

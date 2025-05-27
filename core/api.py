@@ -1,8 +1,22 @@
 from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, Response, stream_with_context
 from .analyzer import Analyzer
+import json
 
 api = Blueprint('api', __name__)
 analyzer = Analyzer()
+
+@api.route('/analyze/progress', methods=['GET'])
+def analyze_progress():
+    code = request.args.get('code')
+    if not code:
+        return Response("Missing required field: code", status=400)
+    
+    def event_stream():
+        for evento in analyzer.mostrar_progreso_lectura(code):
+            yield f"data: {json.dumps(evento)}\n\n"
+    
+    return Response(stream_with_context(event_stream()), mimetype="text/event-stream")
 
 @api.route('/analyze', methods=['POST'])
 def analyze_route():

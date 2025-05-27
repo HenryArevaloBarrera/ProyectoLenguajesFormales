@@ -1,5 +1,7 @@
 import math
+import time
 import numpy as np
+import os
 from io import StringIO
 from .automata import AFD
 from core.Lexical_Validator import LexicalValidator
@@ -7,10 +9,13 @@ from .tokenizer import tokeniza_global, tokeniza_planetas, tokeniza_agujerosnegr
 from .space_visualizer import draw_space_graph
 from .afd import afd_global, afd_planetas, afd_agujerosnegros, afd_nave, afd_textos
 from .regular_grammar import grammar_global, grammar_planetas, grammar_bh, grammar_nave, grammar_textos
-
+from .moore_machine import MooreMachine
+from .mealy_machine import MealyMachine
 # ------------- AFDs y Tokenizers Sintácticos para cada sección -------------
 class AFDSyntax:
     def __init__(self):
+        self.space_analyzer = SpaceAnalyzer()
+
         # [Global]
         self.afd_global = afd_global
         # [Planetas]
@@ -91,6 +96,71 @@ class SpaceAnalyzer:
             self.blackholes = []
             self.spaceship = None
             self.texts = {}
+
+    def mostrar_progreso_lectura(self, file_content):
+            lines = file_content.splitlines() if isinstance(file_content, str) else file_content.readlines()
+            states = ['inicio', 'global', 'planetas', 'agujerosnegros', 'nave', 'textos']
+            input_alphabet = ['[global]', '[planetas]', '[agujerosnegros]', '[nave]', '[textos]']
+            transitions = {
+                ('inicio', '[global]'): 'global',
+                ('global', '[planetas]'): 'planetas',
+                ('planetas', '[agujerosnegros]'): 'agujerosnegros',
+                ('agujerosnegros', '[nave]'): 'nave',
+                ('nave', '[textos]'): 'textos',
+            }
+            outputs_moore = {
+                'inicio': 'Inicio de archivo, esperando sección...',
+                'global': 'Leyendo sección [Global]',
+                'planetas': 'Leyendo sección [Planetas]',
+                'agujerosnegros': 'Leyendo sección [AgujerosNegros]',
+                'nave': 'Leyendo sección [Nave]',
+                'textos': 'Leyendo sección [Textos]',
+            }
+            outputs_mealy = {
+                ('inicio', '[global]'): 'Entrando a sección [Global]',
+                ('global', '[planetas]'): 'Cambiando a sección [Planetas]',
+                ('planetas', '[agujerosnegros]'): 'Cambiando a sección [AgujerosNegros]',
+                ('agujerosnegros', '[nave]'): 'Cambiando a sección [Nave]',
+                ('nave', '[textos]'): 'Cambiando a sección [Textos]',
+            }
+            initial_state = 'inicio'
+            required_sections = set(input_alphabet)
+
+            mealy_state = initial_state
+            moore_state = initial_state
+            found_sections = set()
+            # Primer mensaje de Moore
+            yield {"type": "moore", "message": outputs_moore[moore_state]}
+            time.sleep(0.5)
+
+            for line in lines:
+                symbol = MooreMachine.detect_section(line)
+                if symbol:
+                    found_sections.add(symbol)
+                    # Mealy: emite y transiciona
+                    mealy_key = (mealy_state, symbol)
+                    if mealy_key in transitions:
+                        if mealy_key in outputs_mealy:
+                            msg = outputs_mealy[mealy_key]
+                            yield {"type": "mealy", "message": msg}
+                            time.sleep(0.5)
+                        mealy_state = transitions[mealy_key]
+                    # Moore: transiciona y emite
+                    moore_key = (moore_state, symbol)
+                    if moore_key in transitions:
+                        moore_state = transitions[moore_key]
+                        msg = outputs_moore[moore_state]
+                        yield {"type": "moore", "message": msg}
+                        time.sleep(0.5)
+
+            # Al final, chequeo de secciones faltantes
+            missing = required_sections - found_sections
+            if missing:
+                moore_error = f"[ERROR][MOORE] Faltan las siguientes secciones en el archivo: {', '.join(missing)}"
+                mealy_error = f"[ERROR][MEALY] Faltan las siguientes secciones en el archivo: {', '.join(missing)}"
+                yield {"type": "moore", "message": moore_error}
+                yield {"type": "mealy", "message": mealy_error}
+            yield {"type": "done", "message": "Análisis de progreso completado."}
 
     def _validate_section_grammar(self, section, lines):
         tokens = tokenize_section(section, lines)  # Usa el tokenizador adecuado
@@ -329,6 +399,7 @@ class SpaceAnalyzer:
         return afd
 
     def analyze(self, file_content):
+        self.mostrar_progreso_lectura(file_content)
         print("[INFO] Iniciando análisis... Validando léxico y sintaxis.")
         validator = LexicalValidator()
         try:
@@ -355,7 +426,10 @@ class SpaceAnalyzer:
         real_distance = self._real_route_distance(route_path, mission)
 
         planet_coords = {name: planet.coordinates() for name, planet in mission.planets.items()}
-        draw_space_graph(graph, route_path, planet_coords, filename='mi_mapa_3d.png')
+        current_dir = os.path.dirname(__file__)
+        filename = os.path.join(current_dir, '..', 'static', 'mi_mapa_3d.png')
+        filename = os.path.normpath(filename)
+        draw_space_graph(graph, route_path, planet_coords, filename=filename)
 
         # --- NUEVO RETURN (alineado con tu frontend) ---
         return {
