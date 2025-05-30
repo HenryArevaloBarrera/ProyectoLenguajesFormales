@@ -82,12 +82,18 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
                             <p>Ingresa un código .space y haz clic en "Analizar Misión"</p>
                         </div>
                     </div>
+                   
+
                 </div>
                 <div class="latex-tab">
                     <div class="tab-buttons">
                         <button class="tab-button active" onclick="switchTab('results')">Resultados</button>
                         <button class="tab-button" onclick="switchTab('latex')">Código LaTeX</button>
                     </div>
+
+                     <div id="map-container" style="margin-top: 20px; text-align: center;">
+<img id="map-img" src="" alt="Mapa 3D" style="max-width:100%; border-radius: 8px;">
+</div>
                     <div class="latex-tab-content" id="latex-content">
                         <pre id="latex-code">El código LaTeX aparecerá aquí después del análisis</pre>
                     </div>
@@ -199,6 +205,8 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
                 }
                 renderResults(data);
                 generateLatexCode(data);
+                actualizarImagenMapa();
+
             } catch (error) {
                 showGlobalError(`<strong>Error de conexión:</strong> ${error.message}`);
             }
@@ -249,6 +257,14 @@ Conclusion: La misión demostrará que, incluso en rutas altamente obstaculizada
                 evtSource.close();
             };
         }
+        function actualizarImagenMapa() {
+    const img = document.getElementById('map-img');
+    const container = document.getElementById('map-container');
+    const timestamp = new Date().getTime();
+    img.src = `/static/mi_mapa_3d.png?t=${timestamp}`;
+    container.style.display = 'block';  // mostrar imagen
+}
+
 
         // Generar código LaTeX (igual que antes)
         function generateLatexCode(data) {
