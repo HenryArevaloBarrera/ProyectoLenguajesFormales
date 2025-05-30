@@ -1,5 +1,6 @@
 from flask import Flask, send_from_directory, jsonify
 from core.api import api
+import os
 
 app = Flask(__name__, static_folder='static')
 app.register_blueprint(api, url_prefix='/api')
@@ -32,4 +33,5 @@ def error_404(e):
     return jsonify({"success": False, "error": "Ruta no encontrada"}), 404
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))  # Render define PORT automáticamente
+    app.run(host="0.0.0.0", port=port, debug=True)
