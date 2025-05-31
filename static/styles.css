@@ -7,67 +7,83 @@
     --warning: #f39c12;
     --success: #2ecc71;
 }
+
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
+
 body {
     font-family: 'Roboto', sans-serif;
     background-color: var(--light);
     color: #333;
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh; /* Cambiado de height a min-height */
+    overflow-x: hidden; /* Evita desplazamiento horizontal */
 }
+
 .header {
     background-color: var(--primary);
     color: white;
-    padding: 15px 25px;
+    padding: 12px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--dark);
 }
+
 .logo {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 500;
+    white-space: nowrap;
 }
+
 .logo span {
     color: var(--secondary);
     font-weight: 600;
 }
+
 .main-container {
     display: flex;
     flex: 1;
+    flex-direction: column; /* Cambiado a columna por defecto */
     overflow: hidden;
 }
+
 .panel {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 15px;
+    padding: 12px;
     overflow: hidden;
+    min-height: 300px; /* Altura mínima para cada panel */
 }
+
 .panel-header {
     font-size: 1rem;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     color: var(--primary);
     font-weight: 500;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap; /* Permite que los elementos se ajusten */
+    gap: 8px;
 }
+
 .panel-header button {
     background: var(--secondary);
     color: white;
     border: none;
-    padding: 5px 10px;
+    padding: 6px 12px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.8rem;
+    white-space: nowrap;
 }
+
 .editor-container {
     background: white;
     border-radius: 6px;
@@ -76,227 +92,349 @@ body {
     border: 1px solid #ddd;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     display: flex;
+    flex-direction: column; /* Cambiado para móvil */
 }
+
 .line-numbers {
     background: #f5f7f9;
     color: #7f8c8d;
-    padding: 10px;
+    padding: 8px;
     text-align: right;
     font-family: 'Roboto Mono', monospace;
-    font-size: 0.9rem;
-    line-height: 1.5;
+    font-size: 0.85rem;
+    line-height: 1.4;
     overflow-y: auto;
     user-select: none;
+    display: none; /* Oculto por defecto en móvil */
 }
+
 textarea {
     flex: 1;
     border: none;
     padding: 10px;
     font-family: 'Roboto Mono', monospace;
-    font-size: 0.9rem;
-    line-height: 1.5;
+    font-size: 0.85rem;
+    line-height: 1.4;
     resize: none;
     outline: none;
     background: white;
     color: #2c3e50;
+    min-height: 200px; /* Altura mínima para el textarea */
 }
+
 .latex-container {
     flex: 1;
     border: none;
     padding: 10px;
     font-family: 'Roboto Mono', monospace;
-    font-size: 0.9rem;
-    line-height: 1.5;
+    font-size: 0.85rem;
+    line-height: 1.4;
     background: white;
     color: #2c3e50;
     overflow: auto;
     white-space: pre;
 }
+
 .btn {
     background-color: var(--primary);
     color: white;
     border: none;
-    padding: 12px 24px;
-    border-radius: 12px;
+    padding: 10px 20px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 1rem;
-    margin-top: 20px;
-    box-shadow: 0 4px 10px rgba(44, 62, 80, 0.3);
-    transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+    font-size: 0.9rem;
+    margin-top: 15px;
+    box-shadow: 0 2px 6px rgba(44, 62, 80, 0.2);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    width: 100%; /* Ancho completo en móvil */
 }
 
 .btn:hover {
     background-color: var(--dark);
-    box-shadow: 0 6px 14px rgba(26, 37, 47, 0.5);
-    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(26, 37, 47, 0.3);
 }
 
 .btn-analyze {
     background-color: var(--secondary);
-    box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 2px 6px rgba(52, 152, 219, 0.2);
 }
 
 .btn-analyze:hover {
     background-color: #2980b9;
-    box-shadow: 0 6px 14px rgba(41, 128, 185, 0.5);
-    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(41, 128, 185, 0.3);
 }
 
 .result-container {
     background: white;
     border-radius: 6px;
-    padding: 15px;
+    padding: 12px;
     height: 100%;
     overflow: auto;
     border: 1px solid #ddd;
     display: flex;
     flex-direction: column;
 }
+
 .results-content {
-    flex: 1;
+    height: 80vh;
     overflow: auto;
+    padding: 8px;
+    font-family: 'Roboto', sans-serif; /* Cambiado para mejor legibilidad */
+    font-size: 0.9rem;
+    line-height: 1.5;
+    background: #f5f7f9;
+    border-radius: 6px;
 }
+
 .latex-tab {
-    margin-top: 15px;
+    margin-top: 12px;
     flex: 1;
     display: flex;
     flex-direction: column;
 }
+
 .latex-tab-content {
-    flex: 1;
+    height: 80vh;
+   
     overflow: auto;
     background: #f5f7f9;
     border: 1px solid #ddd;
     border-radius: 0 0 6px 6px;
     padding: 10px;
 }
+
 .tab-buttons {
     display: flex;
-    border-radius: 12px;
+    border-radius: 8px;
     overflow: hidden;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .tab-button {
     flex: 1;
-    padding: 10px 18px;
+    padding: 8px 12px;
     background: #e0e0e0;
     border: none;
     cursor: pointer;
     font-family: 'Roboto', sans-serif;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     transition: background 0.3s;
 }
+
 .tab-button.active {
     background: var(--secondary);
     color: white;
 }
+
 .mission-card {
     background: #f8fafc;
     border-radius: 6px;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-left: 4px solid var(--secondary);
+    padding: 12px;
+    margin-bottom: 12px;
+    border-left: 3px solid var(--secondary);
 }
+
 .mission-title {
     color: var(--primary);
-    margin-bottom: 10px;
-    font-size: 1.2rem;
+    margin-bottom: 8px;
+    font-size: 1.1rem;
 }
+
 .route-path {
     font-family: 'Roboto Mono', monospace;
     background: #2c3e50;
     color: white;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-radius: 4px;
     display: inline-block;
-    margin: 5px 0;
+    margin: 4px 0;
+    font-size: 0.85rem;
+    word-break: break-word; /* Permite que el texto se ajuste */
 }
+
 .data-table {
     width: 100%;
     border-collapse: collapse;
-    margin: 10px 0;
+    margin: 8px 0;
+    font-size: 0.85rem;
 }
+
 .data-table th, .data-table td {
-    padding: 8px 12px;
+    padding: 6px 8px;
     text-align: left;
     border-bottom: 1px solid #eee;
 }
+
 .data-table th {
     background-color: #f5f7f9;
     color: var(--primary);
 }
+
 .warning {
     color: var(--warning);
     background: #fef9e7;
-    padding: 10px;
+    padding: 8px;
     border-radius: 4px;
-    margin: 10px 0;
+    margin: 8px 0;
+    font-size: 0.85rem;
 }
+
 .error {
     color: var(--danger);
     background: #fdedec;
-    padding: 10px;
+    padding: 8px;
     border-radius: 4px;
-    margin: 10px 0;
+    margin: 8px 0;
+    font-size: 0.85rem;
 }
+
 .graph-view {
     font-family: 'Roboto Mono', monospace;
     background: #f5f7f9;
-    padding: 10px;
+    padding: 8px;
     border-radius: 4px;
     overflow-x: auto;
+    font-size: 0.8rem;
 }
+
 .highlight {
     background-color: #e3f2fd;
     font-weight: 500;
 }
+
+/* Scrollbars más delgadas para móvil */
 ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 4px;
+    height: 4px;
 }
+
 ::-webkit-scrollbar-track {
     background: #f1f1f1;
 }
+
 ::-webkit-scrollbar-thumb {
     background: hsl(204, 8%, 76%);
-    border-radius: 4px;
+    border-radius: 2px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background: #95a5a6;
 }
-/* 🟦 Responsive para tablets */
-@media (max-width: 1024px) {
-  .main-container {
-    flex-direction: column;
-  }
 
-  .panel {
-    padding: 10px;
-  }
+/* 🚀 Media Queries para Responsive Design */
 
-  .panel-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .editor-container {
-    flex-direction: column;
-    height: auto;
-  }
-
-  .latex-container,
-  .line-numbers,
-  textarea {
-    width: 100%;
-    height: auto;
-  }
-
-  .btn {
-    width: 100%;
-    font-size: 0.9rem;
-  }
+/* Pantallas pequeñas (móviles en portrait) */
+@media (max-width: 480px) {
+    .header {
+        padding: 10px 15px;
+    }
+    
+    .logo {
+        font-size: 1.1rem;
+    }
+    
+    .panel {
+        padding: 8px;
+    }
+    
+    textarea {
+        font-size: 0.8rem;
+        padding: 8px;
+    }
+    
+    .btn {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+    }
+    
+    .mission-card {
+        padding: 10px;
+    }
+    
+    .mission-title {
+        font-size: 1rem;
+    }
+    
+    .data-table {
+        display: block;
+        overflow-x: auto;
+    }
 }
 
+/* Pantallas medianas (móviles en landscape y tablets pequeñas) */
+@media (min-width: 481px) and (max-width: 767px) {
+    .editor-container {
+        flex-direction: row; /* Restauramos el diseño en horizontal */
+    }
+    
+    .line-numbers {
+        display: block; /* Mostramos números de línea */
+        padding: 6px;
+        font-size: 0.8rem;
+    }
+    
+    textarea {
+        font-size: 0.8rem;
+    }
+}
 
+/* Tablets y pantallas más grandes */
+@media (min-width: 768px) {
+    .main-container {
+        flex-direction: row; /* Diseño horizontal para tablets y desktop */
+    }
+    
+    .panel {
+        min-width: 300px; /* Ancho mínimo para cada panel */
+    }
+    
+    .line-numbers {
+        display: block; /* Mostrar números de línea */
+    }
+    
+    .btn {
+        width: auto; /* Ancho automático en pantallas grandes */
+    }
+    
+    .editor-container {
+        flex-direction: row; /* Editor y números de línea en línea */
+    }
+}
+
+/* Pantallas grandes (desktop) */
+@media (min-width: 1024px) {
+    .panel {
+        padding: 15px;
+    }
+    
+    .panel-header {
+        font-size: 1.1rem;
+    }
+    
+    textarea {
+        font-size: 0.9rem;
+    }
+    
+    .btn {
+        padding: 12px 24px;
+        font-size: 1rem;
+    }
+}
+
+/* Orientación landscape para móviles */
+@media (max-width: 767px) and (orientation: landscape) {
+    .panel {
+        min-height: 200px; /* Altura reducida en landscape */
+    }
+    
+    textarea {
+        min-height: 150px;
+    }
+}
+
+/* Ajustes para pantallas muy altas */
+@media (min-height: 1000px) {
+    .panel {
+        min-height: 400px;
+    }
+}
